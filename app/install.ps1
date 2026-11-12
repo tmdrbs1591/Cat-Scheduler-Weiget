@@ -17,7 +17,7 @@ $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
 $sc.TargetPath = 'powershell.exe'
 $sc.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$ps1`""
 $sc.WindowStyle = 7
-$sc.IconLocation = "$env:ProgramFiles (x86)\Microsoft\Edge\Application\msedge.exe,0"
+$sc.IconLocation = "$(Join-Path $Dest 'cat.ico'),0"
 $sc.Save()
 
 if (-not $NoStartup) { & powershell -NoProfile -ExecutionPolicy Bypass -File $ps1 -Install | Out-Null }

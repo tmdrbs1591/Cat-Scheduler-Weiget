@@ -100,6 +100,7 @@ if ($Install) {
     $sc.TargetPath = 'powershell.exe'
     $sc.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$($MyInvocation.MyCommand.Path)`""
     $sc.WindowStyle = 7
+    $ico = Join-Path $Here 'cat.ico'; if (Test-Path $ico) { $sc.IconLocation = "$ico,0" }
     $sc.Save()
     Write-Host "Registered to run at startup: $Lnk"
     return
@@ -337,7 +338,9 @@ function Show-Widget([int]$sec = 8) {
 # Tray icon: click = show the widget, right click = menu
 $trayCmd = $null
 $tray = New-Object System.Windows.Forms.NotifyIcon
-try {
+$IconFile = Join-Path $Here 'cat.ico'
+if (Test-Path $IconFile) { try { $tray.Icon = New-Object System.Drawing.Icon($IconFile, 32, 32) } catch {} }
+if (-not $tray.Icon) { try {
     $bmp = New-Object System.Drawing.Bitmap 32, 32
     $g = [System.Drawing.Graphics]::FromImage($bmp)
     $g.SmoothingMode = 'AntiAlias'; $g.TextRenderingHint = 'AntiAliasGridFit'
@@ -346,7 +349,17 @@ try {
     $sf = New-Object System.Drawing.StringFormat; $sf.Alignment = 'Center'; $sf.LineAlignment = 'Center'
     $g.DrawString('C', $f, [System.Drawing.Brushes]::White, (New-Object System.Drawing.RectangleF(0, 1, 32, 32)), $sf)
     $tray.Icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
-} catch { $tray.Icon = [System.Drawing.SystemIcons]::Application }
+} catch { $tray.Icon = [System.Drawing.SystemIcons]::Application } }
+
+# shortcuts (desktop + startup) use the cat icon too; fixes older installs after an auto-update
+function Set-ShortcutIcons {
+    if (-not (Test-Path $IconFile)) { return }
+    $shell = New-Object -ComObject WScript.Shell
+    foreach ($l in @((Join-Path ([Environment]::GetFolderPath('Desktop')) 'CAT Schedule Widget.lnk'), $Lnk)) {
+        try { if (Test-Path $l) { $sc = $shell.CreateShortcut($l); if ($sc.IconLocation -ne "$IconFile,0") { $sc.IconLocation = "$IconFile,0"; $sc.Save() } } } catch {}
+    }
+}
+Set-ShortcutIcons
 $tray.Text = "CAT 일정 위젯 v$AppVersion"
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
 $menu.Items.Add('위젯 보이기', $null, { $script:trayCmd = 'show' }) | Out-Null
