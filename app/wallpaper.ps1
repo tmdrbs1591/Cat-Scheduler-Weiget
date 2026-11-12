@@ -247,6 +247,15 @@ function Handle-Request($ctx) {
             $body = [Text.Encoding]::UTF8.GetBytes((@{ current = $AppVersion; available = "$($script:updateReady)" } | ConvertTo-Json -Compress)) }
         '^/update/now$' { $script:trayCmd = 'updatenow'; $body = [Text.Encoding]::UTF8.GetBytes('ok') }
         '^/cmd/drag$' { $doDrag = $true; $body = [Text.Encoding]::UTF8.GetBytes('ok') }
+        '^/cmd/open$' {      # quick links: only these fixed addresses can be opened
+            $links = @{
+                notes = 'https://app.notion.com/p/loadcomplete/15eba942253480baba50d0a85a1cd9da?v=deb89738a3764d46a7f49185b7a944ed'
+                inout = 'https://inout.hr.locom.works/mypage'
+                sched = $SiteUrl
+            }
+            $u = $links[[string]$ctx.Request.QueryString['k']]
+            if ($u) { Start-Process $u }
+            $body = [Text.Encoding]::UTF8.GetBytes('ok') }
         '^/cmd/site$' { Start-Process $SiteUrl; $body = [Text.Encoding]::UTF8.GetBytes('ok') }
         default       { $res.StatusCode = 404; $body = [Text.Encoding]::UTF8.GetBytes('not found') }
     }
