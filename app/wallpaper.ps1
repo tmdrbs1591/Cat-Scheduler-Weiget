@@ -14,6 +14,7 @@ param(
     [int]$DebugPort = 0   # testing only
 )
 
+$WindowName = 'Cat Scheduler Widget'
 $Repo       = 'tmdrbs1591/Cat-Scheduler-Weiget'
 $Project    = 'CAT'
 $SiteUrl    = "https://loadcomplete-scheduler.web.app/?project=$Project"
@@ -130,6 +131,9 @@ public static class W {
     [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern bool SetWindowText(IntPtr h, string s);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+    public static string Title(IntPtr h) { var sb = new StringBuilder(128); GetWindowText(h, sb, 128); return sb.ToString(); }
     [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h, uint cmd);
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr h, StringBuilder s, int n);
@@ -326,6 +330,7 @@ function Pin-ToDesktop($h) {
     [W]::SetWindowLong($h, -20, $ex) | Out-Null
     [W]::SetWindowPos($h, $HWND_BOTTOM, 0, 0, 0, 0, $SWP_NOSIZE -bor $SWP_NOMOVE -bor $SWP_NOACTIVATE -bor $SWP_FRAMECHANGED) | Out-Null
     [W]::ShowWindow($h, 4) | Out-Null                            # SW_SHOWNOACTIVATE
+    [W]::SetWindowText($h, $WindowName) | Out-Null          # name shown on the taskbar (the page title stays empty so the top bar is blank)
     Log "pinned hwnd=$h owner=$progman"
 }
 Pin-ToDesktop $hwnd
@@ -422,6 +427,7 @@ while ($true) {
     Pump-Requests 150
     [System.Windows.Forms.Application]::DoEvents()
     if ((Get-Date) -gt $nextUpdateCheck) { Do-UpdateCheck }
+    if ([W]::IsWindow($hwnd) -and [W]::Title($hwnd) -ne $WindowName) { [W]::SetWindowText($hwnd, $WindowName) | Out-Null }   # Edge resets it on reload
     if ($trayCmd) {
         $cmd = $trayCmd; $trayCmd = $null
         switch ($cmd) {
