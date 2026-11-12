@@ -358,13 +358,13 @@ if (-not $tray.Icon) { try {
 
 # shortcuts (desktop + startup) use the cat icon too; fixes older installs after an auto-update
 function Set-ShortcutIcons {
-    if (-not (Test-Path $IconFile)) { return }
+    if (-not (Test-Path $IconFile) -or (Test-Path (Join-Path $Here '.dev'))) { return }   # a dev copy never touches the real shortcuts
     $shell = New-Object -ComObject WScript.Shell
     foreach ($l in @((Join-Path ([Environment]::GetFolderPath('Desktop')) 'CAT Schedule Widget.lnk'), $Lnk)) {
         try { if (Test-Path $l) {
             $sc = $shell.CreateShortcut($l); $vbs = Join-Path $Here 'launch.vbs'; $dirty = $false
             if ($sc.IconLocation -ne "$IconFile,0") { $sc.IconLocation = "$IconFile,0"; $dirty = $true }
-            if ((Test-Path $vbs) -and $sc.TargetPath -notlike '*wscript.exe') { $sc.TargetPath = 'wscript.exe'; $sc.Arguments = "`"$vbs`""; $dirty = $true }
+            if ((Test-Path $vbs) -and ($sc.TargetPath -notlike '*wscript.exe' -or $sc.Arguments -ne "`"$vbs`"")) { $sc.TargetPath = 'wscript.exe'; $sc.Arguments = "`"$vbs`""; $dirty = $true }
             if ($dirty) { $sc.Save() } } } catch {}
     }
 }
