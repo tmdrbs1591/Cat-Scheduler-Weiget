@@ -212,7 +212,10 @@ function Handle-Request($ctx) {
     $res = $ctx.Response
     $body = $null; $type = 'text/plain; charset=utf-8'; $doDrag = $false
     switch -Regex ($path) {
-        '^/$|^/index\.html$' { $body = [IO.File]::ReadAllBytes((Join-Path $WidgetDir 'index.html')); $type = 'text/html; charset=utf-8' }
+        '^/$|^/index\.html$' {
+            # icon URL carries the version so Edge never keeps showing an old cached taskbar icon
+            $html = [IO.File]::ReadAllText((Join-Path $WidgetDir 'index.html'), [Text.Encoding]::UTF8).Replace('/icons/cat.png"', "/icons/cat.png?v=$AppVersion`"")
+            $body = [Text.Encoding]::UTF8.GetBytes($html); $type = 'text/html; charset=utf-8' }
         '^/cmd/edit$' { $script:editing = $true;  Set-Frameless $script:hwnd $false
                         [W]::SetWindowPos($script:hwnd, [IntPtr]0, 0, 0, 0, 0, 0x1 -bor 0x2) | Out-Null; $body = [Text.Encoding]::UTF8.GetBytes('ok') }
         '^/cmd/done$' { $script:editing = $false; Set-Frameless $script:hwnd $true; $body = [Text.Encoding]::UTF8.GetBytes('ok') }
