@@ -1,0 +1,1286 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>&#8203;</title>
+<meta name="theme-color" content="#15171c">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #15171c; --card: #1d2027; --card2: #252932; --line: #2a2e37;
+    --text: #eef0f4; --sub: #9aa1ad; --dim: #6b7280;
+    --accent: #5b8def; --today: #ff6b5b; --weekend: rgba(255,107,91,.07); --danger: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text);
+    font-family: Pretendard, "Malgun Gothic", sans-serif; overflow: hidden;
+    -webkit-font-smoothing: antialiased; user-select: none; }
+  body { display: flex; flex-direction: column; padding: 16px 18px 12px; gap: 12px; }
+  button { font-family: inherit; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; }
+  .date-big { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+  .date-sub { font-size: 13px; color: var(--sub); margin-top: 6px; }
+  .tools { display: flex; gap: 2px; align-items: center; }
+  .tools button { background: none; border: 0; color: var(--dim); font-size: 12px; cursor: pointer;
+    padding: 4px 7px; border-radius: 6px; }
+  .tools button:hover { color: var(--text); background: var(--line); }
+  .tools button.on { color: var(--text); }
+  body.nolist main { display: none; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } }
+  body { animation: appIn .5s cubic-bezier(.16,1,.3,1); }
+  @keyframes appIn { from { opacity: 0; transform: scale(.985); } }
+  .center > * { animation: fadeUp .4s cubic-bezier(.16,1,.3,1) backwards; }
+  .center > *:nth-child(2) { animation-delay: .06s; }
+  .center > *:nth-child(3) { animation-delay: .12s; }
+  body.nolist .tl { flex: none; }
+  .tools .add { background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; padding: 6px 11px; margin-left: 4px; }
+  .tools .add:hover { background: #4a7de0; color: #fff; }
+
+  /* people chips */
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; flex: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px;
+    background: var(--card); color: var(--sub); font-size: 13px; font-weight: 500; cursor: pointer;
+    border: 1.5px solid transparent; transition: background .12s, color .12s; }
+  .chip:hover { background: var(--card2); color: var(--text); }
+  .chip:active, .tools button:active, .pop .projs button:active { transform: scale(.94); }
+  .chip, .tools button, .pop .projs button { transition: transform .12s, background .12s, color .12s, border-color .12s; }
+  .chip .cd { width: 8px; height: 8px; border-radius: 50%; opacity: .5; }
+  .chip.on { background: var(--card2); color: var(--text); border-color: var(--c, var(--accent)); font-weight: 600; }
+  .chip.on .cd { opacity: 1; }
+  .chip.all { color: var(--dim); }
+
+  /* mini timeline */
+  /* timeline gets the space first (all rows visible); the list below takes what is left */
+  .tl { background: var(--card); border-radius: 12px; padding: 10px 10px 6px; flex: 0 1 auto; min-height: 0;
+    overflow-y: auto; }
+  .tl::-webkit-scrollbar { width: 4px; }
+  .tl::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+  .tl-row { display: grid; grid-template-columns: var(--lab) 1fr; }
+  .tl-lab { font-size: 11.5px; color: var(--sub); font-weight: 600; padding-top: 5px; overflow: hidden;
+    white-space: nowrap; text-overflow: ellipsis; padding-right: 4px; }
+  .tl-days { display: grid; grid-template-columns: repeat(var(--days), 1fr); }
+  .tl-day { text-align: center; font-size: 10.5px; color: var(--dim); padding-bottom: 6px; }
+  .tl-day .dn { display: block; font-size: 13px; color: var(--sub); font-weight: 600; }
+  .tl-day.we, .tl-day.we .dn { color: #e0786c; }
+  .tl-day.td { color: var(--today); font-weight: 700; }
+  .tl-day.td .dn { color: #fff; background: var(--today); border-radius: 50%; width: 22px; height: 22px;
+    line-height: 22px; margin: 0 auto; }
+  .tl-body { position: relative; border-top: 1px solid var(--line); }
+  .tl-cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--days), 1fr); pointer-events: none; }
+  .tl-cols div.we { background: var(--weekend); }
+  .tl-cols div.td { background: rgba(255,107,91,.12); }
+  .tl-rows { position: relative; display: grid; grid-template-columns: repeat(var(--days), 1fr);
+    grid-template-rows: repeat(var(--n), 22px) var(--spare); --spare: 0px;
+    grid-auto-rows: 22px; row-gap: 3px; padding: 4px 0; min-height: 30px; cursor: copy;
+    transition: grid-template-rows .22s cubic-bezier(.2,.8,.2,1); }
+  body.dragmode .tl-rows { --spare: 22px; }
+  .tl-day .mo { color: var(--accent); font-weight: 700; }
+  .tl-sb { display: flex; align-items: center; gap: 6px; height: 12px; margin: -2px 0 6px; padding-left: var(--lab); }
+  .trk { flex: 1; height: 3px; border-radius: 2px; background: var(--bg); position: relative; cursor: pointer; }
+  .trk::before { content: ""; position: absolute; inset: -5px 0; }
+  .thm { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: #4a5060; cursor: grab; }
+  .thm::before { content: ""; position: absolute; inset: -5px 0; }
+  .thm:hover, .thm.on { background: #6b7385; }
+  .trk .tmark { position: absolute; top: -1px; bottom: -1px; width: 2px; border-radius: 1px; background: var(--today); pointer-events: none; }
+  .tl-sb button { background: none; border: 0; color: var(--accent); font-size: 11px; font-weight: 700; line-height: 12px;
+    padding: 0 2px; cursor: pointer; font-family: inherit; flex: none; }
+  .tl-sb button:hover { color: #fff; }
+  .tl-days, .tl-body { position: relative; }
+  .nowl { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #4f6ef7; z-index: 3;
+    pointer-events: none; box-shadow: 0 0 6px rgba(79,110,247,.6); }
+  .tl-days .nowl { top: auto; height: 10px; bottom: 0; }
+  .pi { width: 15px; height: 15px; border-radius: 4px; object-fit: cover; flex: none; vertical-align: -3px; margin-right: 4px; }
+  .pi.px { image-rendering: pixelated; }
+  .bar .pi { width: 16px; height: 16px; margin: 0 4px 0 -3px; vertical-align: -4px; }
+  .bar .nb { position: absolute; top: 2px; right: 2px; width: 7px; height: 7px; border-radius: 50%;
+    background: #ffd43b; box-shadow: 0 0 0 2px rgba(0,0,0,.35), 0 0 6px #ffd43b; z-index: 2; pointer-events: none; }
+  .bar.fresh { box-shadow: 0 0 0 1.5px #ffd43b; }
+  .item .nbadge { font-size: 10.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 6px;
+    vertical-align: 1px; background: #ffd43b; color: #1a1a1a; }
+  .item .nbadge.chg { background: #4dabf7; }
+  .tools .fresh-cnt { color: #1a1a1a; background: #ffd43b; font-weight: 800; }
+  .tools .fresh-cnt:hover { background: #ffe066; color: #1a1a1a; }
+  /* spare row under the bars: only opens while a bar is being dragged, so it can be dropped below */
+  .lane-add { grid-column: 1 / -1; min-height: 0; border-radius: 5px; border: 1px dashed rgba(255,255,255,.16);
+    opacity: 0; transition: opacity .2s; pointer-events: none; }
+  body.dragmode .lane-add { opacity: 1; }
+  .selbar { border-radius: 5px; background: rgba(91,141,239,.35); border: 1.5px dashed #8fb0ff; margin: 0 1px; pointer-events: none;
+    font-size: 11px; font-weight: 700; color: #cfe0ff; line-height: 19px; padding: 0 6px; white-space: nowrap; overflow: hidden; }
+  .bar.sel { outline: 2px solid #fff; outline-offset: 1px; z-index: 2; }
+  .bar.dragging { pointer-events: none; }
+  .item.sel { background: var(--card2); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  /* 1. due today/tomorrow: red glow breathing */
+  .bar.urgent::after { content: ""; position: absolute; inset: 0; border-radius: 5px; pointer-events: none;
+    box-shadow: inset 0 0 0 1.5px #ff5a4f, 0 0 6px rgba(255,90,79,.5); animation: breathe 3s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { opacity: .2; } 50% { opacity: .65; } }
+  /* 2. changed by someone else: a light sweep runs across until you look at it */
+  .bar.fresh::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.65) 50%, transparent 65%);
+    transform: translateX(-110%); animation: sweep 3.2s cubic-bezier(.4,0,.2,1) infinite; }
+  @keyframes sweep { 0% { transform: translateX(-110%); } 45%, 100% { transform: translateX(110%); } }
+  .bar[data-sid], .bar[data-eid] { overflow: hidden; }
+  .shard { position: fixed; pointer-events: none; z-index: 60; border-radius: 2px; }
+  @media (prefers-reduced-motion: reduce) { .bar.urgent::after, .bar.fresh::before { animation: none; } }
+  .bar { border-radius: 5px; font-size: 11.5px; font-weight: 600; padding: 0 6px; line-height: 22px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; margin: 0 1px; cursor: pointer; }
+  .bar { transition: filter .15s, box-shadow .2s; }
+  .bar:hover { filter: brightness(1.15); }
+  .bar[data-sid], .bar[data-eid] { position: relative; cursor: grab; }
+  .bar .h { position: absolute; top: 0; bottom: 0; width: 7px; cursor: ew-resize; z-index: 1; }
+  .bar .h.l { left: 0; } .bar .h.r { right: 0; }
+  .bar .h::after { content: ""; position: absolute; top: 6px; bottom: 6px; width: 2px; border-radius: 1px;
+    background: rgba(255,255,255,.0); left: 2px; transition: background .1s; }
+  .bar:hover .h::after { background: rgba(255,255,255,.7); }
+  .bar.dragging { cursor: grabbing; box-shadow: 0 0 0 2px #fff, 0 4px 12px rgba(0,0,0,.5); z-index: 2; filter: none; }
+  body.dragmode, body.dragmode * { cursor: grabbing !important; }
+  body.resizemode, body.resizemode * { cursor: ew-resize !important; }
+  .dragtip { transition: opacity .12s; position: fixed; background: #fff; color: #111; font-size: 12px; font-weight: 700; padding: 4px 9px;
+    border-radius: 7px; pointer-events: none; z-index: 40; display: none; white-space: nowrap; transform: translate(-50%, -130%); }
+  .bar.ev { background: transparent !important; border: 1.5px dashed var(--ec, #f59e0b); color: var(--ec, #f59e0b); line-height: 19px; }
+  .tl-rows.evrow { background: rgba(245,158,11,.05); min-height: 26px; }
+  .tl-rows.evrow:empty::after { content: "특이사항 · 빈 칸 클릭해서 추가"; position: absolute; left: 6px; top: 6px; font-size: 11px; color: #6b5a3a; pointer-events: none; }
+  .tl-day.hol, .tl-day.hol .dn { color: #e0786c; }
+  .tl-cols div.hol { background: var(--weekend); }
+  .bar.cutl { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: 0; }
+  .bar.cutr { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: 0; }
+
+  /* lists */
+  main { flex: 1 1 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0; padding-right: 2px; min-height: 72px; }
+  main::-webkit-scrollbar { width: 4px; }
+  main::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+  .item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 8px; cursor: pointer; }
+  .item { transition: background .15s, box-shadow .2s; }
+  .item:hover { background: var(--card); }
+  .item.ro { cursor: default; }
+  .item.ro:hover { background: none; }
+  .item .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .item.ev .dot { background: none !important; border: 2px solid var(--ec, #f59e0b); width: 9px; height: 9px; }
+  .item .t { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.now .t { font-weight: 700; }
+  .item .who { font-size: 11.5px; color: var(--dim); margin-right: 5px; font-weight: 500; }
+  .item .dr { font-size: 12px; color: var(--dim); flex: none; }
+  .item .dd { font-size: 12.5px; font-weight: 700; color: var(--sub); flex: none; min-width: 44px; text-align: right; }
+  .item.now .dd { color: var(--text); }
+  .item .dd.soon { color: var(--today); }
+  .item.now { position: relative; padding-bottom: 12px; }
+  .item .pgt { position: absolute; left: 26px; right: 8px; bottom: 4px; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+  .item .pgt i { display: block; height: 100%; border-radius: 2px; }
+  .sep { height: 1px; background: var(--line); margin: 4px 8px; }
+  .empty { color: var(--dim); font-size: 13px; padding: 8px; }
+  .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; color: var(--sub); font-size: 14px; }
+  .btn { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 11px 22px;
+    font-size: 15px; font-weight: 600; cursor: pointer; }
+
+  /* mini popover */
+  .ov { position: fixed; inset: 0; display: none; z-index: 10; pointer-events: none; }
+  .ov .pop { pointer-events: auto; }
+  .tl-rows.adding { --spare: 22px; }
+  .bar.draftbar { position: relative; cursor: grab; opacity: .92; outline: 1.5px dashed rgba(255,255,255,.85); outline-offset: 1px;
+    animation: draftPulse 1.6s ease-in-out infinite; z-index: 2; }
+  @keyframes draftPulse { 50% { outline-color: rgba(255,255,255,.35); } }
+  body.grabbing, body.grabbing * { cursor: grabbing !important; }
+  .ov.show { display: block; }
+  .pop { position: fixed; width: 270px; background: #2a2e38; border: 1px solid #3a3f4b; border-radius: 12px;
+    padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 8px;
+    user-select: text; transform-origin: var(--ox, 50%) var(--oy, 0%);
+    animation: popIn .34s cubic-bezier(.3,1.22,.6,1); }
+  @keyframes popIn { from { transform: scale(.94) translateY(-3px); opacity: 0; } 60% { opacity: 1; } }
+  .ov.closing .pop { animation: popOut .16s cubic-bezier(.4,0,1,1) forwards; }
+  @keyframes popOut { to { transform: scale(.88); opacity: 0; } }
+  .pop .line { display: flex; align-items: center; gap: 8px; }
+  .pop .cdot { width: 20px; height: 20px; border-radius: 50%; flex: none; cursor: pointer; border: 2px solid rgba(255,255,255,.25); }
+  .pop .cdot:hover { border-color: #fff; }
+  .pop input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--text); font-family: inherit;
+    font-size: 15px; font-weight: 600; outline: none; padding: 4px 0; border-bottom: 1px solid transparent; }
+  .pop input:focus { border-bottom-color: var(--accent); }
+  .pop .ib { background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 13px; padding: 4px 6px; border-radius: 6px; flex: none; font-family: inherit; }
+  .pop .ib:hover { background: rgba(255,255,255,.08); color: var(--text); }
+  .pop .ib.del { color: var(--danger); border: 1px solid rgba(239,68,68,.45); display: flex; align-items: center; gap: 4px; font-weight: 600; }
+  .pop .ib.del:hover { background: rgba(239,68,68,.15); color: #ff8a8a; }
+  .pop .ib.del svg { width: 13px; height: 13px; }
+  .pop .ib.del.sure { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .pop .seg { display: flex; background: var(--bg); border-radius: 8px; padding: 2px; gap: 2px; }
+  .pop .seg button { flex: 1; background: none; border: 0; color: var(--dim); font-size: 12px; font-weight: 600; padding: 4px 0;
+    border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .pop .seg button { transition: background .18s, color .18s; }
+  .pop .seg button.on { background: var(--card2); color: var(--text); }
+  .pop .cdot { transition: transform .2s cubic-bezier(.3,1.22,.6,1), border-color .15s; }
+  .pop .cdot:active { transform: scale(.85); }
+  .pop .ok, .pop .ib { transition: transform .12s, background .15s, color .15s; }
+  .pop .ok:active, .pop .ib:active { transform: scale(.93); }
+  .pop .meta { font-size: 12px; color: var(--sub); display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .pop .meta select { background: transparent; color: var(--sub); border: 0; font-family: inherit; font-size: 12px; outline: none; cursor: pointer; }
+  .pop .meta select option { background: var(--card); }
+  .pop .ok { background: var(--accent); color: #fff; border: 0; border-radius: 7px; padding: 5px 12px; font-size: 12.5px;
+    font-weight: 700; cursor: pointer; font-family: inherit; flex: none; }
+  .pop .pal { display: flex; flex-wrap: wrap; gap: 6px; max-height: 0; opacity: 0; overflow: hidden; margin-top: -8px;
+    transition: max-height .28s cubic-bezier(.2,.8,.2,1), opacity .2s, margin-top .28s; }
+  .pop .pal.show { max-height: 70px; opacity: 1; margin-top: 0; padding: 2px 0; }
+  .pop .pal i { transition: transform .15s; }
+  .pop .pal i { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; }
+  .pop .pal i:hover { transform: scale(1.08); }
+  .pop .projs { display: flex; gap: 5px; flex-wrap: wrap; }
+  .pop .projs button { display: flex; align-items: center; gap: 5px; background: var(--bg); border: 1.5px solid transparent;
+    color: var(--sub); font-size: 12px; font-weight: 600; padding: 4px 9px 4px 5px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  .pop .projs button:hover { color: var(--text); }
+  .pop .projs button.on { border-color: var(--accent); color: var(--text); background: rgba(91,141,239,.12); }
+  .pop .projs .pi { margin: 0; width: 18px; height: 18px; }
+  .pop .err { color: var(--danger); font-size: 12px; }
+  .pop .err:empty { display: none; }
+  .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #fff; color: #111;
+    font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 999px; opacity: 0; transition: opacity .2s;
+    pointer-events: none; z-index: 20; white-space: nowrap; display: flex; gap: 10px; align-items: center; }
+  .toast { transition: opacity .2s, transform .28s cubic-bezier(.2,1.4,.4,1); transform: translate(-50%, 14px); }
+  .toast.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+  .toast button { background: none; border: 0; color: var(--accent); font-weight: 800; font-size: 13px; cursor: pointer; padding: 0; }
+
+  .editbar { position: fixed; inset: auto 12px 12px 12px; background: var(--accent); color: #fff;
+    border-radius: 10px; padding: 10px 14px; display: none; align-items: center; justify-content: space-between;
+    font-size: 13px; z-index: 30; }
+  .editbar button { background: #fff; color: var(--accent); border: 0; border-radius: 7px; padding: 6px 14px;
+    font-weight: 700; cursor: pointer; }
+  body.editing .editbar { display: flex; }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="date-big" id="dBig"></div>
+      <div class="date-sub" id="dSub"></div>
+    </div>
+    <div class="tools">
+      <button id="bFresh" class="fresh-cnt" style="display:none" title="최근 24시간 안에 추가/변경된 일정 · 누르면 모두 확인 처리"></button>
+      <button id="bList" title="아래 목록 보기/숨기기 (위젯 크기도 같이 바뀜)">목록</button>
+      <button id="bSite" title="스케줄러 사이트 열기">사이트</button>
+      <button id="bAdd" class="add" title="일정 추가">+ 일정</button>
+    </div>
+  </header>
+  <div class="chips" id="chips"></div>
+  <div id="app" class="center">불러오는 중…</div>
+
+  <div class="ov" id="ov"><div class="pop" id="pop"></div></div>
+  <div class="toast" id="toast"></div>
+  <div class="dragtip" id="dragtip"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, query, where, orderBy, onSnapshot, getDocs,
+  doc, addDoc, updateDoc, deleteDoc, setDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const PROJECT = new URLSearchParams(location.search).get("project") || "CAT";
+const WS = "default-workspace";
+const DAY = 86400000, PAST_DAYS = 2, TL_DAYS = 14;
+const DEFAULT_COLOR = "#3498DB", EVENT_COLOR = "#f59e0b";
+const PALETTE = ["#3498DB","#2980B9","#5C6BC0","#33C1FF","#1ABC9C","#27AE60","#2ECC71","#F1C40F",
+  "#F39C12","#E67E22","#FF6B6B","#E74C3C","#E91E63","#8E44AD","#9B59B6","#607D8B","#795548","#455A64"];
+
+const fb = initializeApp({
+  apiKey: "AIzaSyDc65XWqCQ4Zbg7bPaHNXWdssOnsJ1Y3Hw",
+  authDomain: "teamscheduler-9f626.firebaseapp.com",
+  projectId: "teamscheduler-9f626",
+  storageBucket: "teamscheduler-9f626.firebasestorage.app",
+  messagingSenderId: "103764253395",
+  appId: "1:103764253395:web:f5ef0674cebe543a2a1226",
+});
+const auth = getAuth(fb), db = getFirestore(fb);
+const $ = (id) => document.getElementById(id);
+const app = $("app");
+// ---------- errors go to the widget log (wallpaper.log) so they can be sent with "문제 보고" ----------
+const sendLog = (msg) => { try { fetch("/log", { method: "POST", body: String(msg).slice(0, 1500) }).catch(() => {}); } catch {} };
+window.addEventListener("error", (e) => sendLog(`error: ${e.message} @${(e.filename || "").split("/").pop()}:${e.lineno}:${e.colno}`));
+window.addEventListener("unhandledrejection", (e) => sendLog(`promise: ${e.reason?.code || ""} ${e.reason?.message || e.reason}`));
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+let members = [], projects = [], schedules = [], events = [], user = null, projectObj = null;
+let selected = [];          // member ids being viewed
+let meId = null;
+
+// ---------- date helpers (site convention: endDate = midnight AFTER the last day) ----------
+const sod = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const lastDay = (s) => sod(s.endDate - 1);
+const toMs = (v) => (v && typeof v.toMillis === "function") ? v.toMillis() : v;
+const WD = ["일", "월", "화", "수", "목", "금", "토"];
+const fmt = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const fmtW = (t) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]})`; };
+const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const parseYmd = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d).getTime(); };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const cmd = (c) => fetch("/cmd/" + c).catch(() => {});
+const memberById = (id) => members.find((m) => m.id === id);
+const projName = (id) => projects.find((p) => p.id === id)?.name || "";
+// schedules live in schedules/, 특이사항 in globalEvents/ (holidays = events without a project)
+const pathOf = (it) => `${it._ev ? "globalEvents" : "schedules"}/${WS}/items/${it.id}`;
+const findItem = (el) => el.dataset.eid ? events.find((x) => x.id === el.dataset.eid) : schedules.find((x) => x.id === el.dataset.sid);
+// project icons shown before titles: title keywords win, then the schedule's project name
+const ICONS = [
+  { file: "welldiver", keys: ["웰다이버", "well diver", "welldiver"] },
+  { file: "cq", keys: ["cq"] },
+  { file: "voiddiver", keys: ["void diver", "voiddiver", "보이드"], px: true },
+];
+const QUICK_PROJECTS = [
+  { label: "CQ Idle", names: ["cq 키우기", "cq idle"], icon: "cq" },
+  { label: "Well", names: ["웰다이버", "well diver"], icon: "welldiver" },
+  { label: "Void", names: ["void diver"], icon: "voiddiver", px: true },
+];
+const quickProjects = () => QUICK_PROJECTS.map((q) => ({ ...q,
+  id: projects.find((p) => q.names.includes((p.name || "").toLowerCase()))?.id })).filter((q) => q.id);
+function iconFor(it) {
+  const title = (it.title || "").toLowerCase(), proj = projName(it.projectId).toLowerCase();
+  const hit = ICONS.find((i) => i.keys.some((k) => title.includes(k))) || ICONS.find((i) => i.keys.some((k) => proj.includes(k)));
+  return hit ? `<img class="pi ${hit.px ? "px" : ""}" src="/icons/${hit.file}.png" alt="">` : "";
+}
+// ---------- "NEW / 변경" badges: items others added or changed in the last 24h, until you open them ----------
+const FRESH_MS = 24 * 3600 * 1000;
+let seen = {};
+try { seen = JSON.parse(store.get("seen") || "{}"); } catch { seen = {}; }
+const saveSeen = () => {      // drop entries older than 2 days so this stays small
+  const cut = Date.now() - 2 * FRESH_MS;
+  for (const k of Object.keys(seen)) if (seen[k] < cut) delete seen[k];
+  store.set("seen", JSON.stringify(seen));
+};
+function freshKind(it) {
+  const up = it.updatedAt || it.createdAt; if (!up) return null;
+  if (Date.now() - up > FRESH_MS) return null;
+  if ((seen[it.id] || 0) >= up) return null;
+  const isNew = it.createdAt && up - it.createdAt < 60000;
+  if (isNew && user && it.createdBy === user.uid) return null;     // I created it
+  return isNew ? "new" : "chg";
+}
+// editor stamp: editedAt is written in the same write as updatedAt, so they match only if the last edit came from a widget
+const stamp = () => ({ editedBy: memberById(meId)?.name || user?.displayName || user?.email || "", editedByUid: user?.uid || "", editedAt: serverTimestamp() });
+function editorOf(it) {
+  if (it.editedBy && it.editedAt && it.updatedAt && Math.abs(it.editedAt - it.updatedAt) < 2000) return it.editedBy;
+  return null;
+}
+function creatorOf(it) {
+  if (user && it.createdBy === user.uid) return memberById(meId)?.name || "나";
+  const known = [...schedules, ...events].find((x) => x.editedByUid && x.editedByUid === it.createdBy);
+  return known ? known.editedBy : null;
+}
+function freshLabel(it, k) {
+  if (k === "new") { const c = creatorOf(it); return { short: c ? `NEW · ${c}` : "NEW", tip: c ? `${c} 님이 추가` : "새로 추가됨 (추가한 사람 기록 없음)" }; }
+  const e = editorOf(it);
+  return { short: e ? `변경 · ${e}` : "변경", tip: e ? `${e} 님이 변경` : "사이트에서 변경됨 (사이트는 수정한 사람을 기록하지 않음)" };
+}
+const markSeen = (it) => { if (!it) return; seen[it.id] = Date.now() + 60000; saveSeen(); };
+const projEvents = () => events.filter((e) => projectObj && e.projectId === projectObj.id);
+let evRowCounts = {};
+let toastT;
+const toast = (msg, undo) => {
+  if (/실패/.test(msg)) sendLog("toast: " + msg);
+  const t = $("toast"); t.innerHTML = esc(msg) + (undo ? ` <button id="tUndo">되돌리기</button>` : "");
+  if (t.classList.contains("show")) bump(t);
+  t.classList.add("show"); clearTimeout(toastT);
+  if (undo) $("tUndo").onclick = () => { t.classList.remove("show"); undo(); };
+  toastT = setTimeout(() => t.classList.remove("show"), undo ? 5000 : 1800);
+};
+
+function visibleMembers() {
+  return members.filter((m) => !m.isHidden && (!projectObj || !projectObj.memberIds?.length || projectObj.memberIds.includes(m.id)));
+}
+
+// ---------- header + chips ----------
+function renderHeader() {
+  const now = new Date();
+  $("dBig").textContent = `${now.getMonth() + 1}월 ${now.getDate()}일`;
+  $("dSub").textContent = `${now.getFullYear()}년 ${WD[now.getDay()]}요일 · ${PROJECT}`;
+  $("bAdd").style.display = user ? "" : "none";
+}
+
+let chipBump = null;
+function renderChips() {
+  const vm = visibleMembers();
+  if (!user || !vm.length) { $("chips").innerHTML = ""; return; }
+  const allOn = vm.every((m) => selected.includes(m.id));
+  $("chips").innerHTML =
+    `<div class="chip all ${allOn ? "on" : ""}" data-all="1" title="전체 보기 / 해제">전체</div>` +
+    vm.map((m) => `<div class="chip ${selected.includes(m.id) ? "on" : ""}" data-id="${m.id}" style="--c:${m.color || "var(--accent)"}"
+        title="클릭: 추가/빼기 · 더블클릭: 이 사람만">
+        <span class="cd" style="background:${m.color || "var(--accent)"}"></span>${esc(m.name)}${m.id === meId ? " (나)" : ""}</div>`).join("");
+  if (chipBump) { bump($("chips").querySelector(chipBump === "all" ? ".chip.all" : `.chip[data-id="${chipBump}"]`)); chipBump = null; }
+}
+
+let chipClickT = null;
+$("chips").addEventListener("click", (e) => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  const vm = visibleMembers();
+  chipBump = c.dataset.all ? "all" : c.dataset.id;
+  if (c.dataset.all) {
+    const allOn = vm.every((m) => selected.includes(m.id));
+    selected = allOn ? (meId ? [meId] : [vm[0].id]) : vm.map((m) => m.id);
+    saveSel(); render(); return;
+  }
+  const id = c.dataset.id;
+  clearTimeout(chipClickT);
+  chipClickT = setTimeout(() => {            // single click: toggle
+    if (selected.includes(id)) { if (selected.length > 1) selected = selected.filter((x) => x !== id); }
+    else selected = [...selected, id];
+    saveSel(); render();
+  }, 200);
+});
+$("chips").addEventListener("dblclick", (e) => {   // double click: only this person
+  const c = e.target.closest(".chip[data-id]"); if (!c) return;
+  clearTimeout(chipClickT);
+  chipBump = c.dataset.id; selected = [c.dataset.id]; saveSel(); render();
+});
+$("chips").addEventListener("wheel", (e) => { if (e.deltaY) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+const saveSel = () => store.set("selected", JSON.stringify(selected));
+
+// ---------- main render ----------
+function renderLogin(msg) {
+  app.className = "center"; app.removeAttribute("style");
+  app.innerHTML = `<div>${msg || "스케줄러 계정으로 로그인하세요"}</div><button class="btn" id="bLogin">Google 로그인</button>`;
+  $("bLogin").onclick = () => signInWithPopup(auth, new GoogleAuthProvider())
+    .catch((e) => { sendLog("login: " + (e.code || e.message)); renderLogin("로그인 실패: " + esc(e.code || e.message)); });
+}
+
+let tlOffset = 0; const OFF_MIN = -90, OFF_MAX = 180;
+const SPAN = OFF_MAX - OFF_MIN;
+const thumbW = () => TL_DAYS / (SPAN + TL_DAYS) * 100;
+function scrollbar() {
+  const w = thumbW(), left = (tlOffset - OFF_MIN) / SPAN * (100 - w);
+  const todayAt = (0 - OFF_MIN) / SPAN * (100 - w) + w * PAST_DAYS / TL_DAYS;
+  return `<div class="tl-sb"><div class="trk" id="trk" title="끌거나 휠로 앞뒤 일정 보기">
+      <i class="tmark" style="left:${todayAt}%"></i>
+      <div class="thm ${sbDrag ? "on" : ""}" style="left:${left}%;width:${w}%"></div></div>
+    ${tlOffset ? `<button id="bToday">오늘</button>` : ""}</div>`;
+}
+function setOffset(v) {
+  v = Math.max(OFF_MIN, Math.min(OFF_MAX, Math.round(v)));
+  if (v !== tlOffset) { const had = !!tlOffset; tlOffset = v; animMode = "scroll"; render(); if (!had && tlOffset) springIn($("bToday"), .4); }
+}
+// wheel over the timeline: scroll days (Shift+wheel = scroll the rows up/down when there are many people)
+let wheelAcc = 0;
+app.addEventListener("wheel", (e) => {
+  const tl = e.target.closest(".tl"); if (!tl || drag) return;
+  if (e.shiftKey && tl.scrollHeight > tl.clientHeight) return;
+  e.preventDefault();
+  wheelAcc += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  const step = Math.trunc(wheelAcc / 40);
+  if (step) { wheelAcc -= step * 40; setOffset(tlOffset + step); }
+}, { passive: false });
+// scrollbar: drag the thumb or click the track; "오늘" jumps back
+let sbDrag = null;
+app.addEventListener("mousedown", (e) => {
+  const trk = e.target.closest("#trk"); if (!trk || e.button !== 0) return;
+  e.preventDefault();
+  const r = trk.getBoundingClientRect(), w = thumbW() / 100 * r.width;
+  const posToOff = (x) => OFF_MIN + (x - r.left - grab) / (r.width - w) * SPAN;
+  const thumb = e.target.closest(".thm");
+  const thumbLeft = r.left + (tlOffset - OFF_MIN) / SPAN * (r.width - w);
+  const grab = thumb ? e.clientX - thumbLeft : w / 2;
+  sbDrag = true;
+  if (!thumb) setOffset(posToOff(e.clientX));
+  const mv = (ev) => setOffset(posToOff(ev.clientX));
+  window.addEventListener("mousemove", mv);
+  window.addEventListener("mouseup", () => { window.removeEventListener("mousemove", mv); sbDrag = null; render(); }, { once: true });
+});
+app.addEventListener("click", (e) => { if (e.target.id === "bToday") setOffset(0); });
+app.addEventListener("dblclick", (e) => { if (e.target.closest("#trk")) setOffset(0); });
+
+// ---------- motion: bars grow in, slide/stretch to new spots, shrink away when removed ----------
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let animMode = "normal", bounceId = null;
+const EASE_OUT = "cubic-bezier(.16,1,.3,1)", EASE_SPRING = "cubic-bezier(.2,.9,.3,1.03)";
+function snapBars() {
+  const m = new Map();
+  app.querySelectorAll(".bar[data-sid], .bar[data-eid]").forEach((b) => m.set(b.dataset.sid || b.dataset.eid, { r: b.getBoundingClientRect(), el: b }));
+  return m;
+}
+function flip(el, o, dur = 300) {           // animate from the old box o to where el is now
+  const n = el.getBoundingClientRect();
+  const dx = o.left - n.left, dy = o.top - n.top, dw = n.width - o.width;
+  if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(dw) < 1) return;
+  const kf = dw >= 0
+    ? [{ transform: `translate(${dx}px,${dy}px)`, clipPath: `inset(0 ${dw}px 0 0 round 5px)` }, { transform: "none", clipPath: "inset(0 0 0 0 round 5px)" }]
+    : [{ transform: `translate(${dx}px,${dy}px) scaleX(${o.width / n.width})`, transformOrigin: "left center" }, { transform: "none", transformOrigin: "left center" }];
+  el.animate(kf, { duration: dur, easing: EASE_SPRING });
+}
+// re-renders replace the DOM; remember when each grow started so a new render continues it instead of cutting it off
+const growStart = new Map();
+const GROW_MS = 520;
+function growIn(el, i) {
+  const id = el.dataset.sid || el.dataset.eid;
+  const delay = Math.min(i, 14) * 40;
+  growStart.set(id, performance.now() + delay);
+  el.animate([{ clipPath: "inset(0 100% 0 0 round 5px)", opacity: .3 }, { clipPath: "inset(0 0 0 0 round 5px)", opacity: 1 }],
+    { duration: GROW_MS, delay, easing: EASE_OUT, fill: "backwards" });
+}
+function continueGrow(el, id) {     // true if this bar was still growing and the grow was resumed
+  const t0 = growStart.get(id); if (t0 == null) return false;
+  const done = performance.now() - t0;
+  if (done >= GROW_MS) { growStart.delete(id); return false; }
+  el.animate([{ clipPath: "inset(0 100% 0 0 round 5px)", opacity: .3 }, { clipPath: "inset(0 0 0 0 round 5px)", opacity: 1 }],
+    { duration: GROW_MS, delay: -done, easing: EASE_OUT, fill: "backwards" });
+  return true;
+}
+function shrinkOut(o) {
+  const c = o.el.cloneNode(true);
+  c.classList.remove("sel", "dragging");
+  Object.assign(c.style, { position: "fixed", left: o.r.left + "px", top: o.r.top + "px", width: o.r.width + "px", height: o.r.height + "px",
+    margin: "0", zIndex: "50", pointerEvents: "none", gridColumn: "auto", gridRow: "auto" });
+  document.body.appendChild(c);
+  c.animate([{ clipPath: "inset(0 0 0 0 round 5px)", opacity: 1 }, { clipPath: "inset(0 100% 0 0 round 5px)", opacity: 0 }],
+    { duration: 360, easing: "cubic-bezier(.5,0,.75,0)" }).onfinish = () => c.remove();
+}
+// 7. deleted for real: the bar breaks into pieces that fly off
+function shatter(o) {
+  const cs = getComputedStyle(o.el);
+  const isEv = o.el.classList.contains("ev");
+  const color = isEv ? (cs.getPropertyValue("--ec").trim() || "#f59e0b") : cs.backgroundColor;
+  const r = o.r, cols = Math.max(4, Math.min(14, Math.round(r.width / 9))), rows = 3;
+  const w = r.width / cols, h = r.height / rows;
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const sh = document.createElement("div");
+    sh.className = "shard";
+    Object.assign(sh.style, { left: r.left + x * w + "px", top: r.top + y * h + "px", width: w + 0.5 + "px", height: h + 0.5 + "px", background: color });
+    document.body.appendChild(sh);
+    const dx = (x - cols / 2) * (6 + Math.random() * 10) + (Math.random() - .5) * 30;
+    const dy = (y - 1) * 14 + 30 + Math.random() * 50;
+    const rot = (Math.random() - .5) * 540;
+    sh.animate([
+      { transform: "translate(0,0) rotate(0) scale(1)", opacity: 1 },
+      { transform: `translate(${dx * .35}px,${-12 - Math.random() * 14}px) rotate(${rot * .3}deg) scale(.95)`, opacity: 1, offset: .25 },
+      { transform: `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(.4)`, opacity: 0 },
+    ], { duration: 650 + Math.random() * 350, delay: x * 12, easing: "cubic-bezier(.3,.6,.5,1)", fill: "backwards" }).onfinish = () => sh.remove();
+  }
+}
+// 9. a person's row folds up / unfolds when they are hidden / shown
+function snapRows() {
+  const m = new Map();
+  app.querySelectorAll(".tl-row[data-key]").forEach((el) => m.set(el.dataset.key, { r: el.getBoundingClientRect(), el }));
+  return m;
+}
+function foldAway(o) {
+  const c = o.el.cloneNode(true);
+  const tl = document.getElementById("tl");
+  Object.assign(c.style, { position: "fixed", left: o.r.left + "px", top: o.r.top + "px", width: o.r.width + "px", height: o.r.height + "px",
+    margin: "0", zIndex: "40", pointerEvents: "none", background: "var(--card)" });
+  c.style.setProperty("--days", TL_DAYS);
+  c.style.setProperty("--lab", tl ? getComputedStyle(tl).getPropertyValue("--lab") : "0px");
+  c.querySelectorAll(".nowl").forEach((n) => n.remove());
+  document.body.appendChild(c);
+  c.animate([{ clipPath: "inset(0 0 0 0)", opacity: 1, transform: "none" }, { clipPath: "inset(0 0 100% 0)", opacity: 0, transform: "translateY(-6px)" }],
+    { duration: 320, easing: "cubic-bezier(.4,0,.6,1)" }).onfinish = () => c.remove();
+}
+const springIn = (el, from = .6) => el && !RM && el.animate(
+  [{ transform: `scale(${from})`, opacity: 0 }, { transform: "scale(1.03)", opacity: 1, offset: .6 }, { transform: "scale(1)" }],
+  { duration: 380, easing: "cubic-bezier(.3,1.22,.6,1)" });
+const bump = (el) => el && !RM && el.animate([{ transform: "scale(1)" }, { transform: "scale(1.05)" }, { transform: "scale(1)" }], { duration: 260, easing: "ease-out" });
+function pop(el) { el.animate([{ transform: "scale(1)" }, { transform: "scale(1.02, 1.08)" }, { transform: "scale(1)" }], { duration: 260, easing: "ease-out" }); }
+let listSeen = new Set();
+
+function render() {
+  if (drag) { pendingRender = true; return; }
+  const before = (!RM && app.querySelector(".bar")) ? snapBars() : null;
+  const rowsBefore = (!RM && app.querySelector(".tl-row[data-key]")) ? snapRows() : null;
+  renderHeader();
+  if (!user || !members.length) return;
+  renderChips();
+
+  const today = sod(Date.now());
+  const tlStart = today + (tlOffset - PAST_DAYS) * DAY, tlEnd = tlStart + TL_DAYS * DAY;
+  const multi = selected.length > 1;
+  const order = visibleMembers().map((m) => m.id).filter((id) => selected.includes(id));
+  const mine = schedules.filter((s) => selected.includes(s.memberId)).sort((a, b) => a.startDate - b.startDate);
+  const evs = projEvents().sort((a, b) => a.startDate - b.startDate);
+  const holidays = events.filter((e) => !e.projectId);
+  const holidayOn = (t) => holidays.find((h) => sod(h.startDate) <= t && lastDay(h) >= t);
+
+  // ---- mini timeline
+  let cols = "", head = "";
+  for (let i = 0; i < TL_DAYS; i++) {
+    const d = new Date(tlStart + i * DAY), we = d.getDay() === 0 || d.getDay() === 6, td = d.getTime() === today;
+    const hol = holidayOn(d.getTime());
+    const cls = `${we ? "we" : ""} ${td ? "td" : ""} ${hol ? "hol" : ""}`;
+    const top = (i === 0 || d.getDate() === 1) ? `<span class="mo">${d.getMonth() + 1}월</span>` : WD[d.getDay()];
+    head += `<div class="tl-day ${cls}" ${hol ? `title="${esc(hol.title)}"` : ""}>${top}<span class="dn">${d.getDate()}</span></div>`;
+    cols += `<div class="${cls}"></div>`;
+  }
+  const barsFor = (items, isEv) => {
+    const lanes = [];   // lanes[n] = list of [a, b] day spans already placed in that row
+    const free = (l, a, b) => !(lanes[l] || []).some(([x, y]) => !(b < x || a > y));
+    const out = items.map((item) => {
+      const s = sod(item.startDate), e = lastDay(item);
+      if (e < tlStart || s >= tlEnd) return "";
+      const a = Math.max(0, Math.round((s - tlStart) / DAY)), b = Math.min(TL_DAYS - 1, Math.round((e - tlStart) / DAY));
+      let lane = item.rowIndex || 0; while (!free(lane, a, b)) lane++;     // same row as on the site
+      (lanes[lane] = lanes[lane] || []).push([a, b]);
+      const cut = `${s < tlStart ? "cutl" : ""} ${e >= tlEnd ? "cutr" : ""}`;
+      const done = e < today;   // finished -> gray
+      const idAttr = isEv ? `data-eid="${item.id}"` : `data-sid="${item.id}"`;
+      const style = isEv
+        ? `--ec:${done ? "#6b7280" : (item.color || EVENT_COLOR)}`
+        : `background:${done ? "#3d424d" : (item.color || DEFAULT_COLOR)};${done ? "color:#9aa1ad" : (item.textColor ? `color:${item.textColor}` : "")}`;
+      const fk = freshKind(item);
+      const urgent = !isEv && !done && e - today <= DAY;     // ends today or tomorrow
+      return `<div class="bar ${isEv ? "ev" : ""} ${cut} ${fk ? "fresh" : ""} ${item.id === selId ? "sel" : ""} ${urgent ? "urgent" : ""}" ${idAttr} data-a="${a}" data-b="${b}" data-lane="${lane}" title="${esc(item.title)} (${fmt(s)}–${fmt(e)})${fk ? " · " + esc(freshLabel(item, fk).tip) : ""}"
+        style="grid-column:${a + 1}/${b + 2};grid-row:${lane + 1};${style}"><i class="h l"></i><i class="h r"></i>${fk ? `<i class="nb" title="${esc(freshLabel(item, fk).tip)}"></i>` : ""}${iconFor(item)}${esc(item.title || "(제목 없음)")}</div>`;
+    }).join("");
+    const html = out.trim();
+    // one spare lane under the bars, so there is always an empty spot to add into
+    barsFor.n = lanes.length;
+    return html ? html + `<div class="lane-add" style="grid-row:${lanes.length + 1}"></div>` : "";
+  };
+  const lab = multi ? "52px" : "0px";
+  const nowPct = (Date.now() - tlStart) / (TL_DAYS * DAY) * 100;
+  const nowLine = nowPct >= 0 && nowPct <= 100 ? `<i class="nowl" style="left:${nowPct}%"></i>` : "";
+  const rowBlock = (label, inner, memberId, n) => `
+    <div class="tl-row" data-key="${memberId || "ev"}">
+      <div class="tl-lab" title="${esc(label)}">${multi ? esc(label) : ""}</div>
+      <div class="tl-body"><div class="tl-cols">${cols}</div>${nowLine}
+        <div class="tl-rows ${memberId ? "" : "evrow"}" ${memberId ? `data-mid="${memberId}"` : `data-ev="1"`} ${inner.trim() ? `style="--n:${n}"` : ""}>${inner.trim()}</div></div>
+    </div>`;
+  const evBars = barsFor(evs, true), evN = barsFor.n;
+  let tlHtml = `<div class="tl-row"><div></div><div class="tl-days">${head}${nowLine}</div></div>`;
+  if (projectObj) tlHtml += rowBlock("특이사항", evBars, null, evN);
+  for (const id of order) { const h = barsFor(mine.filter((s) => s.memberId === id), false); tlHtml += rowBlock(memberById(id)?.name || "", h, id, barsFor.n); }
+
+  // ---- one compact list: ongoing (by deadline), then upcoming + special notes (by start)
+  const ongoing = mine.filter((s) => sod(s.startDate) <= today && lastDay(s) >= today).sort((a, b) => a.endDate - b.endDate);
+  const later = [
+    ...mine.filter((s) => sod(s.startDate) > today),
+    ...evs.filter((e) => lastDay(e) >= today),
+  ].sort((a, b) => a.startDate - b.startDate).slice(0, multi ? 12 : 8);
+  const range = (s) => sod(s.startDate) === lastDay(s) ? fmt(s.startDate) : `${fmt(s.startDate)}–${fmt(lastDay(s))}`;
+  // progress = share of the schedule's days that have started (today counts)
+  const pct = (s) => { const total = (lastDay(s) - sod(s.startDate)) / DAY + 1;
+    return Math.min(100, Math.round(((today - sod(s.startDate)) / DAY + 1) / total * 100)); };
+  const row = (s, now) => {
+    const n = now ? Math.round((lastDay(s) - today) / DAY) : Math.round((sod(s.startDate) - today) / DAY);
+    const label = now ? (n === 0 ? "오늘" : `D-${n}`) : (n <= 0 ? "진행 중" : n === 1 ? "내일" : `${n}일 후`);
+    const who = multi && !s._ev ? `<span class="who">${esc(memberById(s.memberId)?.name || "")}</span>` : "";
+    return `<div class="item ${now ? "now" : ""} ${s._ev ? "ev" : ""} ${s.id === selId ? "sel" : ""}" ${s._ev ? `data-eid="${s.id}" style="--ec:${s.color || EVENT_COLOR}"` : `data-sid="${s.id}"`} title="${esc(s.title)} · ${range(s)}">
+      <i class="dot" style="background:${s.color || DEFAULT_COLOR}"></i>
+      <span class="t">${who}${iconFor(s)}${esc(s.title || "(제목 없음)")}${(() => { const k = freshKind(s);
+        if (!k) return ""; const L = freshLabel(s, k);
+        return `<span class="nbadge ${k}" title="${esc(L.tip)}">${esc(L.short)}</span>`; })()}</span>
+      <span class="dr">${range(s)}</span>
+      <span class="dd ${now && n <= 1 ? "soon" : ""}">${label}</span>
+      ${now ? `<span class="pgt"><i style="width:${pct(s)}%;background:${s.color || DEFAULT_COLOR}"></i></span>` : ""}
+    </div>`;
+  };
+  const freshItems = [...mine, ...evs].filter((x) => freshKind(x));
+  const wasHidden = $("bFresh").style.display === "none", prevTxt = $("bFresh").textContent;
+  $("bFresh").style.display = freshItems.length ? "" : "none";
+  $("bFresh").textContent = `새 소식 ${freshItems.length}`;
+  if (freshItems.length && wasHidden) springIn($("bFresh")); else if (freshItems.length && prevTxt !== $("bFresh").textContent) bump($("bFresh"));
+  $("bFresh").onclick = () => { freshItems.forEach((x) => { seen[x.id] = Date.now() + 60000; }); saveSeen(); render(); };
+  app.className = ""; app.style.cssText = "flex:1;display:flex;flex-direction:column;gap:12px;min-height:0";
+  app.innerHTML = `
+    <div class="tl" id="tl" style="--days:${TL_DAYS};--lab:${lab}">${scrollbar()}${tlHtml}</div>
+    <main>
+      ${ongoing.map((s) => row(s, true)).join("")}
+      ${ongoing.length && later.length ? `<div class="sep"></div>` : ""}
+      ${later.map((s) => row(s, false)).join("")}
+      ${!ongoing.length && !later.length ? `<div class="empty">예정된 일정이 없어요</div>` : ""}
+    </main>`;
+
+  fitToContent();
+  if (!RM) {
+    const now = snapBars();
+    let i = 0;
+    for (const [id, { el }] of now) {
+      const o = before?.get(id);
+      if (o) { if (!continueGrow(el, id)) flip(el, o.r, animMode === "scroll" ? 170 : 320); }
+      else if (animMode === "scroll") el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
+      else growIn(el, i++);
+    }
+    const rowsNow = snapRows();
+    if (rowsBefore && animMode !== "scroll") {
+      for (const [k, { el }] of rowsNow) if (!rowsBefore.has(k))
+        el.animate([{ clipPath: "inset(0 0 100% 0)", opacity: 0, transform: "translateY(-6px)" }, { clipPath: "inset(0 0 0 0)", opacity: 1, transform: "none" }],
+          { duration: 420, easing: EASE_OUT });
+      for (const [k, o] of rowsBefore) if (!rowsNow.has(k)) foldAway(o);
+    }
+    if (before && animMode !== "scroll") for (const [id, o] of before) {
+      if (now.has(id)) continue;
+      const exists = schedules.some((x) => x.id === id) || events.some((x) => x.id === id);
+      if (!exists) { shatter(o); continue; }                       // really deleted
+      const rowKey = o.el.parentElement?.dataset.mid || (o.el.parentElement?.dataset.ev ? "ev" : null);
+      if (rowsBefore && rowKey && !rowsNow.has(rowKey)) continue;  // whole row is folding away
+      shrinkOut(o);
+    }
+    // list rows that just appeared slide in
+    let j = 0;
+    const ids = new Set();
+    app.querySelectorAll("main .item").forEach((el) => {
+      const id = el.dataset.sid || el.dataset.eid; ids.add(id);
+      if (!listSeen.has(id)) el.animate([{ opacity: 0, transform: "translateX(-10px)" }, { opacity: 1, transform: "none" }],
+        { duration: 340, delay: Math.min(j++, 10) * 30, easing: EASE_OUT, fill: "backwards" });
+    });
+    listSeen = ids;
+    if (bounceId) { const el = app.querySelector(`.bar[data-sid="${bounceId}"], .bar[data-eid="${bounceId}"]`); if (el) pop(el); }
+  }
+  animMode = "normal"; bounceId = null;
+  placeDraft(tlStart);
+  app.querySelectorAll(".item[data-sid], .item[data-eid]").forEach((el) => el.addEventListener("click", (ev) => {
+    ev.stopPropagation(); const s = findItem(el); if (s) tapItem(s, el);
+  }));
+  app.querySelectorAll(".bar[data-sid], .bar[data-eid]").forEach((el) => {
+    el.addEventListener("mousedown", (ev) => startDrag(ev, el, tlStart));
+    el.addEventListener("click", (ev) => ev.stopPropagation());
+  });
+  // click an empty day in someone's timeline row -> add on that day
+  app.querySelectorAll(".tl-rows[data-mid], .tl-rows[data-ev]").forEach((el) => {
+    el.addEventListener("mousedown", (ev) => startPick(ev, el, tlStart));
+    el.addEventListener("click", (ev) => ev.stopPropagation());
+  });
+}
+
+// ---------- press on an empty spot and drag sideways to pick the days for a new item ----------
+function startPick(ev, rowsEl, tlStart) {
+  if (ev.button !== 0 || ev.target.closest(".bar")) return;
+  ev.preventDefault();
+  selId = null;
+  const r = rowsEl.getBoundingClientRect(), dw = r.width / TL_DAYS;
+  const dayAt = (x) => Math.max(0, Math.min(TL_DAYS - 1, Math.floor((x - r.left) / dw)));
+  const a0 = dayAt(ev.clientX);
+  // ghost bar in the lane under the pointer (the spare lane when clicking below the bars)
+  const laneH = 25, lane = Math.max(0, Math.floor((ev.clientY - r.top - 4) / laneH));
+  const ghost = document.createElement("div");
+  ghost.className = "selbar"; ghost.style.gridRow = String(lane + 1);
+  rowsEl.appendChild(ghost);
+  let a = a0, b = a0;
+  const paint = () => {
+    ghost.style.gridColumn = `${a + 1}/${b + 2}`;
+    ghost.textContent = a === b ? fmtW(tlStart + a * DAY) : `${fmtW(tlStart + a * DAY)} – ${fmtW(tlStart + b * DAY)} · ${b - a + 1}일`;
+  };
+  paint(); drag = { pick: true };            // pause re-renders while picking
+  document.body.classList.add("resizemode");
+  const mv = (e) => { const d = dayAt(e.clientX); a = Math.min(a0, d); b = Math.max(a0, d); paint(); };
+  window.addEventListener("mousemove", mv);
+  window.addEventListener("mouseup", (e) => {
+    window.removeEventListener("mousemove", mv);
+    document.body.classList.remove("resizemode");
+    const gr = ghost.getBoundingClientRect();
+    drag = null; lastDragEnd = Date.now();
+    openSheet(null, { memberId: rowsEl.dataset.mid, ev: !!rowsEl.dataset.ev, start: tlStart + a * DAY, end: tlStart + b * DAY, lane },
+      { getBoundingClientRect: () => ({ left: gr.left, top: gr.top, bottom: gr.bottom }) });
+    // keep the ghost visible while the popup is open; it goes away on the next render
+    if (pendingRender) { pendingRender = false; }
+  }, { once: true });
+}
+
+// ---------- undo / redo (Ctrl+Z / Ctrl+Y) for everything done in the widget ----------
+const hist = { done: [], undone: [] };
+function record(op) { hist.done.push(op); if (hist.done.length > 50) hist.done.shift(); hist.undone = []; }
+async function applyOp(op, dir) {
+  const ref = doc(db, op.path);
+  if (op.id) seen[op.id] = Date.now() + 60000;
+  if (op.type === "create") {
+    if (dir === "undo") await deleteDoc(ref); else await setDoc(ref, { ...op.data, updatedAt: serverTimestamp(), ...stamp() });
+  } else if (op.type === "delete") {
+    if (dir === "undo") await setDoc(ref, op.backup); else await deleteDoc(ref);
+  } else {
+    await updateDoc(ref, { ...(dir === "undo" ? op.prev : op.next), updatedAt: serverTimestamp(), ...stamp() });
+  }
+}
+async function undo() {
+  const op = hist.done.pop(); if (!op) { toast("되돌릴 작업이 없어요"); return; }
+  try { await applyOp(op, "undo"); hist.undone.push(op); toast(`되돌림: ${op.label}`); }
+  catch (e) { hist.done.push(op); toast("되돌리기 실패: " + (e.code || e.message)); }
+}
+async function redo() {
+  const op = hist.undone.pop(); if (!op) { toast("다시 할 작업이 없어요"); return; }
+  try { await applyOp(op, "redo"); hist.done.push(op); toast(`다시 실행: ${op.label}`); }
+  catch (e) { hist.undone.push(op); toast("다시 실행 실패: " + (e.code || e.message)); }
+}
+document.addEventListener("keydown", (e) => {
+  if (!(e.ctrlKey || e.metaKey) || drag) return;
+  if (e.target.closest?.("input, textarea, select")) return;     // keep normal text undo while typing
+  const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
+});
+const short = (t) => { t = t || "(제목 없음)"; return t.length > 14 ? t.slice(0, 14) + "…" : t; };
+
+// ---------- selection: click = select (outline), double click = edit, Delete = delete, Esc = clear ----------
+let selId = null, lastTap = { id: null, t: 0 }, hinted = store.get("selHint") === "1";
+function tapItem(it, anchorEl) {
+  const now = Date.now();
+  if (lastTap.id === it.id && now - lastTap.t < 450) {           // double click -> edit popup
+    lastTap = { id: null, t: 0 };
+    const el = document.querySelector(`.bar[data-${it._ev ? "eid" : "sid"}="${it.id}"]`) || anchorEl;
+    openSheet(it, {}, el); return;
+  }
+  lastTap = { id: it.id, t: now };
+  selId = it.id; bounceId = it.id; render();
+  if (!hinted) { hinted = true; store.set("selHint", "1"); toast("Delete 삭제 · 더블클릭 수정 · Esc 선택 해제"); }
+}
+async function deleteItem(it) {
+  const backup = { ...it }; delete backup.id; delete backup._ev;
+  const path = pathOf(it);
+  await deleteDoc(doc(db, path));
+  record({ type: "delete", path, id: it.id, backup, label: `${short(it.title)} 삭제` });
+  if (selId === it.id) selId = null;
+  toast("삭제했어요", undo);
+}
+document.addEventListener("keydown", async (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey || drag) return;
+  if ($("ov").classList.contains("show") || e.target.closest?.("input, textarea, select")) return;
+  if (e.key === "Escape" && selId) { selId = null; render(); return; }
+  if ((e.key === "Delete" || e.key === "Backspace") && selId) {
+    e.preventDefault();
+    const it = schedules.find((x) => x.id === selId) || events.find((x) => x.id === selId);
+    if (!it) { selId = null; render(); return; }
+    try { await deleteItem(it); } catch (err) { toast("삭제 실패: " + (err.code || err.message)); }
+  }
+});
+
+// ---------- drag bars: move (body) / resize (edges) ----------
+let drag = null, pendingRender = false, lastDragEnd = 0;
+function startDrag(ev, el, tlStart) {
+  if (ev.button !== 0) return;
+  ev.preventDefault(); ev.stopPropagation();
+  const s = findItem(el); if (!s) return;
+  const rows = el.parentElement, dayW = rows.getBoundingClientRect().width / TL_DAYS;
+  const mode = ev.target.classList.contains("l") ? "left" : ev.target.classList.contains("r") ? "right" : "move";
+  drag = { s, el, mode, x0: ev.clientX, y0: ev.clientY, dayW, tlStart, a: +el.dataset.a, b: +el.dataset.b, delta: 0, moved: false,
+    rows0: rows, lane0: +el.dataset.lane, target: rows, lane: +el.dataset.lane };
+  el.classList.add("dragging");
+  window.addEventListener("mousemove", onDragMove);
+  window.addEventListener("mouseup", onDragEnd, { once: true });
+}
+function dragRange() {
+  const { s, mode, delta } = drag;
+  let st = sod(s.startDate), en = lastDay(s);
+  if (mode === "move") { st += delta * DAY; en += delta * DAY; }
+  else if (mode === "left") st = Math.min(en, st + delta * DAY);
+  else en = Math.max(st, en + delta * DAY);
+  return { st, en };
+}
+function onDragMove(ev) {
+  const dx = ev.clientX - drag.x0;
+  if (!drag.moved && (Math.abs(dx) > 3 || Math.abs(ev.clientY - drag.y0) > 4)) {
+    drag.moved = true;
+    document.body.classList.add(drag.mode === "move" ? "dragmode" : "resizemode");   // drop row opens now, not on click
+  }
+  if (!drag.moved) return;
+  const vis = drag.el.getBoundingClientRect();       // where it is on screen right now (mid-animation included)
+  const colBefore = drag.el.style.gridColumn, rowBefore = drag.el.style.gridRow, parentBefore = drag.el.parentElement;
+  drag.delta = Math.round(dx / drag.dayW);
+  if (drag.mode === "move") {          // up/down: another row, or (schedules) another person's row
+    const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".tl-rows");
+    const ok = under && (drag.s._ev ? under.dataset.ev : under.dataset.mid);
+    const target = ok ? under : drag.target;
+    const tr = target.getBoundingClientRect();
+    const maxLane = Math.max(0, Math.round((tr.height - 8 + 3) / 25) - 1);
+    const lane = Math.max(0, Math.min(maxLane, Math.floor((ev.clientY - tr.top - 4) / 25)));
+    if (target !== drag.el.parentElement) target.appendChild(drag.el);
+    drag.el.style.gridRow = String(lane + 1);
+    drag.target = target; drag.lane = lane;
+  }
+  const { st, en } = dragRange();
+  const a = Math.round((st - drag.tlStart) / DAY), b = Math.round((en - drag.tlStart) / DAY);
+  drag.el.style.gridColumn = `${Math.max(0, a) + 1}/${Math.min(TL_DAYS - 1, Math.max(0, b)) + 2}`;
+  if (!RM && (drag.el.style.gridColumn !== colBefore || drag.el.style.gridRow !== rowBefore || drag.el.parentElement !== parentBefore)) {
+    drag.el.getAnimations().forEach((x) => x.cancel());
+    flip(drag.el, vis, 150);
+  }
+  const tip = $("dragtip");
+  const n = Math.round((en - st) / DAY) + 1;
+  const who = !drag.s._ev && drag.target.dataset.mid !== drag.s.memberId ? ` → ${memberById(drag.target.dataset.mid)?.name || ""}` : "";
+  tip.textContent = `${fmtW(st)} – ${fmtW(en)} · ${n}일${who}`;
+  tip.style.left = ev.clientX + "px"; tip.style.top = drag.el.getBoundingClientRect().top + "px";
+  if (drag.moved && tip.style.display !== "block") { tip.style.display = "block"; springIn(tip, .7); }
+}
+async function onDragEnd() {
+  window.removeEventListener("mousemove", onDragMove);
+  document.body.classList.remove("dragmode", "resizemode");
+  $("dragtip").style.display = "none";
+  const d = drag; const { st, en } = dragRange(); drag = null; lastDragEnd = Date.now();
+  d.el.classList.remove("dragging");
+  if (!d.moved) { pendingRender = false; tapItem(d.s); return; }
+  const startDate = st, endDate = en + DAY;
+  const isEv = !!d.s._ev;
+  const newMember = isEv ? null : (d.target.dataset.mid || d.s.memberId);
+  const vertical = d.target !== d.rows0 || d.lane !== d.lane0;
+  if (!vertical && startDate === d.s.startDate && endDate === d.s.endDate) { pendingRender = false; render(); return; }
+  const prev = { startDate: d.s.startDate, endDate: d.s.endDate, rowIndex: d.s.rowIndex || 0, ...(isEv ? {} : { memberId: d.s.memberId }) };
+  try {
+    markSeen(d.s);
+    // wanted row: where it was dropped (or its old row if only moved sideways); if that spot is taken, the first free row
+    let rowIndex = vertical ? d.lane : (d.s.rowIndex || 0);
+    const peers = isEv ? events.filter((x) => !x.projectId || x.projectId === d.s.projectId) : schedules.filter((x) => x.memberId === newMember);
+    const taken = peers.some((x) => x.id !== d.s.id && (x.rowIndex || 0) === rowIndex && !(endDate <= x.startDate || startDate >= x.endDate));
+    if (taken) rowIndex = isEv ? await pickEventRow(d.s.projectId, startDate, endDate, d.s.id) : await pickRow(newMember, startDate, endDate, d.s.id);
+    else if (isEv) {
+      const key = d.s.projectId || "default";
+      if (rowIndex + 1 > (evRowCounts[key] || 1)) {
+        await setDoc(doc(db, `globalEventSettings/${WS}`), { rowCounts: { [key]: rowIndex + 1 }, updatedAt: serverTimestamp() }, { merge: true });
+        evRowCounts[key] = rowIndex + 1;
+      }
+    } else {
+      const m = memberById(newMember);
+      if (m && rowIndex + 1 > (m.rowCount || 1)) {
+        await updateDoc(doc(db, `teams/${WS}/members/${newMember}`), { rowCount: rowIndex + 1, updatedAt: serverTimestamp() });
+        m.rowCount = rowIndex + 1;
+      }
+    }
+    const next = { startDate, endDate, rowIndex, ...(isEv ? {} : { memberId: newMember }) };
+    Object.assign(d.s, next);                     // optimistic: stay where it was dropped
+    pendingRender = false; bounceId = d.s.id; render();
+    await updateDoc(doc(db, pathOf(d.s)), { ...next, updatedAt: serverTimestamp(), ...stamp() });
+    const moved = !isEv && newMember !== prev.memberId;
+    record({ type: "update", path: pathOf(d.s), id: d.s.id, prev, next, label: `${short(d.s.title)} ${moved ? "담당 변경" : "이동"}` });
+    toast(moved ? `${memberById(newMember)?.name || ""} 님에게 옮김` : `${fmt(startDate)} – ${fmt(endDate - DAY)} 로 변경`, undo);
+  } catch (e) {
+    Object.assign(d.s, prev); pendingRender = false; render();
+    toast("변경 실패: " + (e.code || e.message));
+  }
+}
+
+// ---------- mini popover: title + color (+ delete). Dates are changed by dragging bars ----------
+let editing = null, draft = null;
+function openSheet(s, preset = {}, anchor = null) {
+  if (s && freshKind(s)) { markSeen(s); setTimeout(render, 0); }
+  editing = s;
+  const today = sod(Date.now());
+  const isEv = s ? !!s._ev : !!preset.ev;
+  const memberId = s?.memberId || preset.memberId || (selected.length === 1 ? selected[0] : (selected.includes(meId) ? meId : selected[0]));
+  const lastProj = schedules.filter((x) => x.memberId === memberId && x.projectId).sort((a, b) => b.startDate - a.startDate)[0]?.projectId;
+  draft = {
+    ev: isEv, memberId, color: s?.color || (isEv ? EVENT_COLOR : DEFAULT_COLOR), projectId: s ? s.projectId : lastProj,
+    st: s ? sod(s.startDate) : (preset.start ?? today), en: s ? lastDay(s) : (preset.end ?? preset.start ?? today),
+    lane: preset.lane,
+  };
+  const multiPick = !s && !preset.memberId && !isEv && selected.length > 1;
+  const canSwitch = !s && !preset.memberId && (!preset.ev || preset._fromSeg) && projectObj;   // from [+ 일정]: choose 일정 / 특이사항
+  const who = multiPick
+    ? `<select id="pMember">${selected.map((id) => `<option value="${id}" ${id === memberId ? "selected" : ""}>${esc(memberById(id)?.name)}</option>`).join("")}</select>`
+    : esc(isEv ? "특이사항" : (memberById(memberId)?.name || ""));
+  const trash = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`;
+  $("pop").innerHTML = `
+    ${canSwitch ? `<div class="seg" id="pSeg"><button data-k="s" class="${isEv ? "" : "on"}">일정</button><button data-k="e" class="${isEv ? "on" : ""}">특이사항</button></div>` : ""}
+    <div class="line">
+      <span class="cdot" id="pDot" style="background:${draft.color}" title="색상"></span>
+      <input id="pTitle" value="${esc(s?.title || "")}" placeholder="${s ? "제목" : isEv ? "특이사항 내용" : "새 일정 제목"}" maxlength="100">
+      ${s ? `<button class="ib del" id="pDel" title="삭제">${trash}삭제</button>` : ""}
+    </div>
+    ${isEv ? "" : (() => {
+      const qs = quickProjects(), cur = draft.projectId;
+      const other = cur && !qs.some((q) => q.id === cur) ? `<button data-p="${cur}" class="on">${esc(projName(cur))}</button>` : "";
+      return `<div class="projs" id="pProj">${qs.map((q) => `<button data-p="${q.id}" class="${q.id === cur ? "on" : ""}" title="${esc(projName(q.id))}">
+        <img class="pi ${q.px ? "px" : ""}" src="/icons/${q.icon}.png" alt="">${q.label}</button>`).join("")}${other}</div>`;
+    })()}
+    <div class="pal" id="pPal">${PALETTE.map((c) => `<i data-c="${c}" style="background:${c}"></i>`).join("")}</div>
+    <div class="meta"><span>${who} · <span id="pDates">${draftDates()}</span></span>
+      <button class="ok" id="pOk">${s ? "저장" : "추가"}</button></div>
+    <div class="err" id="pErr"></div>`;
+  // place next to the clicked thing, kept inside the window
+  const pop = $("pop"), W = innerWidth, H = innerHeight, pw = 270;
+  const ar = anchor?.getBoundingClientRect() || { left: W - pw - 16, bottom: 70, top: 70 };
+  $("ov").classList.add("show");
+  const x = Math.min(Math.max(8, ar.left), W - pw - 8);
+  let y = ar.bottom + 6;
+  if (y + pop.offsetHeight > H - 8) y = Math.max(8, ar.top - pop.offsetHeight - 6);
+  pop.style.left = x + "px"; pop.style.top = y + "px";
+  pop.style.setProperty("--ox", Math.max(0, Math.min(pw, (ar.left + 20) - x)) + "px");
+  pop.style.setProperty("--oy", y > ar.top ? "0%" : "100%");
+  $("ov").classList.remove("closing");
+  pop.style.animation = "none"; void pop.offsetWidth; pop.style.animation = "";   // replay the open animation
+
+  $("pDot").onclick = () => {
+    const open = $("pPal").classList.toggle("show");
+    if (open && !RM) $("pPal").querySelectorAll("i").forEach((i, n) => i.animate(
+      [{ transform: "scale(0)" }, { transform: "scale(1.07)", offset: .6 }, { transform: "scale(1)" }],
+      { duration: 320, delay: n * 18, easing: "cubic-bezier(.3,1.22,.6,1)", fill: "backwards" }));
+  };
+  $("pPal").onclick = (e) => { const i = e.target.closest("i"); if (!i) return;
+    draft.color = i.dataset.c; $("pDot").style.background = draft.color; bump($("pDot"));
+    const db_ = app.querySelector(".draftbar"); if (db_) { if (draft.ev) db_.style.setProperty("--ec", draft.color); else db_.style.background = draft.color; } $("pPal").classList.remove("show"); $("pTitle").focus(); };
+  if ($("pProj")) $("pProj").onclick = (e) => { const b = e.target.closest("button"); if (!b) return;
+    draft.projectId = b.dataset.p;
+    $("pProj").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); bump(b); $("pTitle").focus(); };
+  if ($("pMember")) $("pMember").onchange = (e) => { draft.memberId = e.target.value; render(); };
+  $("pTitle").addEventListener("input", () => { const t = app.querySelector(".draftbar .dt"); if (t) t.textContent = $("pTitle").value.trim() || (draft?.ev ? "새 특이사항" : "새 일정"); });
+  if ($("pSeg")) $("pSeg").onclick = (e) => { const k = e.target.closest("button")?.dataset.k; if (!k) return;
+    const keep = $("pTitle").value; openSheet(null, { ev: k === "e", start: draft.st, end: draft.en, _fromSeg: true }, anchor); $("pTitle").value = keep;
+    if (k === "s") { /* allow switching back */ } };
+  $("pOk").onclick = save;
+  $("pTitle").onkeydown = (e) => { if (e.key === "Enter") save(); };
+  if (s) {
+    const del = $("pDel");
+    del.onclick = async () => {
+      if (!del.classList.contains("sure")) { del.classList.add("sure"); del.innerHTML = trash + "정말 삭제"; return; }
+      try {
+        await deleteItem(s); closeSheet();
+      } catch (e) { $("pErr").textContent = "삭제 실패: " + (e.code || e.message); }
+    };
+  }
+  setTimeout(() => { $("pTitle").focus(); $("pTitle").select(); }, 30);
+  if (!s) { render(); const d = app.querySelector(".draftbar"); if (d && !RM) growIn(d, 0); }
+}
+let closeT = null;
+function draftDates() {
+  if (!draft) return "";
+  const n = Math.round((draft.en - draft.st) / DAY) + 1;
+  return `${fmtW(draft.st)}${draft.en !== draft.st ? " – " + fmtW(draft.en) + ` · ${n}일` : ""}`;
+}
+// ---------- while adding: a dashed draft bar on the timeline you can drag / stretch to set the dates ----------
+function placeDraft(tlStart) {
+  if (!draft || editing || !$("ov").classList.contains("show")) return;
+  const rows = draft.ev ? app.querySelector(".tl-rows[data-ev]") : app.querySelector(`.tl-rows[data-mid="${draft.memberId}"]`);
+  if (!rows) return;
+  app.querySelectorAll(".selbar").forEach((x) => x.remove());
+  const n = parseInt(rows.style.getPropertyValue("--n")) || 0;
+  // which row: the one clicked if nothing is there on those days, otherwise the first free one, otherwise a new row
+  const a = Math.round((draft.st - tlStart) / DAY), b = Math.round((draft.en - tlStart) / DAY);
+  const busy = (l) => [...rows.querySelectorAll(".bar[data-lane]")].some((x) => +x.dataset.lane === l && !(b < +x.dataset.a || a > +x.dataset.b));
+  let lane = draft.lane != null && draft.lane <= n && !busy(draft.lane) ? draft.lane : -1;
+  if (lane < 0) { lane = 0; while (lane < n && busy(lane)) lane++; }
+  draft.lane = lane;
+  if (lane >= n) rows.classList.add("adding");          // only open the extra row when it is really needed
+  const el = document.createElement("div");
+  el.className = `bar draftbar ${draft.ev ? "ev" : ""}`;
+  el.style.gridRow = String(lane + 1);
+  if (draft.ev) el.style.setProperty("--ec", draft.color); else el.style.background = draft.color;
+  el.innerHTML = `<i class="h l"></i><i class="h r"></i><span class="dt"></span>`;
+  rows.appendChild(el);
+  draftLayout(el, tlStart, false);
+  el.addEventListener("mousedown", (ev) => startDraftDrag(ev, el, rows, tlStart));
+  el.addEventListener("click", (ev) => ev.stopPropagation());
+}
+function draftLayout(el, tlStart, animate) {
+  const a = Math.round((draft.st - tlStart) / DAY), b = Math.round((draft.en - tlStart) / DAY);
+  const vis = el.getBoundingClientRect();
+  el.style.gridColumn = `${Math.max(0, Math.min(TL_DAYS - 1, a)) + 1}/${Math.max(0, Math.min(TL_DAYS - 1, b)) + 2}`;
+  el.querySelector(".dt").textContent = ($("pTitle")?.value.trim()) || (draft.ev ? "새 특이사항" : "새 일정");
+  if (animate && !RM) { el.getAnimations().filter((x) => x instanceof Animation && !(x instanceof CSSAnimation)).forEach((x) => x.cancel()); flip(el, vis, 150); }
+}
+function startDraftDrag(ev, el, rows, tlStart) {
+  if (ev.button !== 0) return;
+  ev.preventDefault(); ev.stopPropagation();
+  const mode = ev.target.classList.contains("l") ? "left" : ev.target.classList.contains("r") ? "right" : "move";
+  const dw = rows.getBoundingClientRect().width / TL_DAYS, x0 = ev.clientX, st0 = draft.st, en0 = draft.en;
+  drag = { pick: true };                       // pause re-renders while dragging
+  document.body.classList.add(mode === "move" ? "grabbing" : "resizemode");
+  const tip = $("dragtip");
+  const mv = (e) => {
+    const d = Math.round((e.clientX - x0) / dw);
+    let st = st0, en = en0;
+    if (mode === "move") { st += d * DAY; en += d * DAY; }
+    else if (mode === "left") st = Math.min(en0, st0 + d * DAY);
+    else en = Math.max(st0, en0 + d * DAY);
+    if (st !== draft.st || en !== draft.en) { draft.st = st; draft.en = en; draftLayout(el, tlStart, true); $("pDates").textContent = draftDates(); }
+    const a2 = Math.round((draft.st - tlStart) / DAY), b2 = Math.round((draft.en - tlStart) / DAY), n2 = parseInt(rows.style.getPropertyValue("--n")) || 0;
+    const busy2 = (l) => [...rows.querySelectorAll(".bar[data-lane]")].some((x) => +x.dataset.lane === l && !(b2 < +x.dataset.a || a2 > +x.dataset.b));
+    if (busy2(draft.lane)) {
+      let l = 0; while (l < n2 && busy2(l)) l++;
+      const vis = el.getBoundingClientRect();
+      draft.lane = l; rows.classList.toggle("adding", l >= n2); el.style.gridRow = String(l + 1);
+      if (!RM) flip(el, vis, 150);
+    }
+    if (tip.style.display !== "block") { tip.style.display = "block"; springIn(tip, .7); }
+    tip.textContent = draftDates();
+    tip.style.left = e.clientX + "px"; tip.style.top = el.getBoundingClientRect().top + "px";
+  };
+  window.addEventListener("mousemove", mv);
+  window.addEventListener("mouseup", () => {
+    window.removeEventListener("mousemove", mv);
+    document.body.classList.remove("grabbing", "resizemode");
+    tip.style.display = "none";
+    drag = null; lastDragEnd = Date.now();
+    if (pendingRender) { pendingRender = false; render(); }
+    if (!RM) pop(app.querySelector(".draftbar") || el);
+    $("pTitle")?.focus();
+  }, { once: true });
+}
+
+function closeSheet(deferRender = false) {
+  editing = null; draft = null;
+  const ov = $("ov"); clearTimeout(closeT);
+  if (RM) ov.classList.remove("show");
+  else {
+    ov.classList.add("closing");
+    closeT = setTimeout(() => { if (ov.classList.contains("closing")) ov.classList.remove("show", "closing"); }, 160);
+  }
+  // after an outside click, redraw once that click's own handlers have run (they may start a drag/pick on the current DOM)
+  if (deferRender) setTimeout(render, 0); else render();
+}
+// clicking anywhere outside the popup (and outside the draft bar) closes it
+document.addEventListener("mousedown", (e) => {
+  if (!$("ov").classList.contains("show") || $("ov").classList.contains("closing")) return;
+  if (e.target.closest?.(".pop, .draftbar")) return;
+  closeSheet(true);
+}, true);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("ov").classList.contains("show")) closeSheet(); });
+
+// Same rule as the site: first row of that member with no overlap, else a new row
+async function pickRow(memberId, startDate, endDate, ignoreId) {
+  const m = memberById(memberId);
+  const rowCount = Math.max(1, m?.rowCount || 1);
+  const others = schedules.filter((x) => x.memberId === memberId && x.id !== ignoreId);
+  for (let r = 0; r < rowCount; r++) {
+    const busy = others.filter((x) => (x.rowIndex || 0) === r).some((x) => !(endDate <= x.startDate || startDate >= x.endDate));
+    if (!busy) return r;
+  }
+  await updateDoc(doc(db, `teams/${WS}/members/${memberId}`), { rowCount: rowCount + 1, updatedAt: serverTimestamp() });
+  if (m) m.rowCount = rowCount + 1;
+  return rowCount;
+}
+
+// 특이사항 rows: same rule as the site, per project (globalEventSettings.rowCounts)
+async function pickEventRow(projectId, startDate, endDate, ignoreId) {
+  const key = projectId || "default";
+  const rowCount = Math.max(1, evRowCounts[key] || 1);
+  const peers = events.filter((x) => (!x.projectId || x.projectId === projectId) && x.id !== ignoreId);
+  for (let r = 0; r < rowCount; r++) {
+    if (!peers.filter((x) => (x.rowIndex || 0) === r).some((x) => !(endDate <= x.startDate || startDate >= x.endDate))) return r;
+  }
+  await setDoc(doc(db, `globalEventSettings/${WS}`), { rowCounts: { [key]: rowCount + 1 }, updatedAt: serverTimestamp() }, { merge: true });
+  evRowCounts[key] = rowCount + 1;
+  return rowCount;
+}
+
+async function save() {
+  const title = $("pTitle").value.trim();
+  if (!title) { $("pErr").textContent = "제목을 입력하세요"; $("pTitle").focus(); return; }
+  const { memberId, color, projectId } = draft;
+  $("pOk").disabled = true;
+  try {
+    if (editing) {
+      markSeen(editing);
+      const next = { title, color, ...(editing._ev ? {} : { projectId: draft.projectId || null }) };
+      const prev = { title: editing.title || "", color: editing.color || null, ...(editing._ev ? {} : { projectId: editing.projectId || null }) };
+      await updateDoc(doc(db, pathOf(editing)), { ...next, updatedAt: serverTimestamp(), ...stamp() });
+      record({ type: "update", path: pathOf(editing), id: editing.id, prev, next, label: `${short(prev.title)} 수정` });
+    } else if (draft.ev) {
+      const startDate = draft.st, endDate = draft.en + DAY;
+      const pid = projectObj.id;
+      const rowIndex = await pickEventRow(pid, startDate, endDate, null);
+      const evData = { projectId: pid, title, startDate, endDate, color, rowIndex,
+        createdBy: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ...stamp() };
+      const ref = await addDoc(collection(db, `globalEvents/${WS}/items`), evData);
+      record({ type: "create", path: `globalEvents/${WS}/items/${ref.id}`, id: ref.id, data: evData, label: `${short(title)} 추가` });
+      toast("특이사항 추가 · 막대 끝을 끌어 기간 조절");
+    } else {
+      const startDate = draft.st, endDate = draft.en + DAY;     // site stores the midnight after the last day
+      const want = draft.lane;
+      const free = want != null && !schedules.some((x) => x.memberId === memberId && (x.rowIndex || 0) === want && !(endDate <= x.startDate || startDate >= x.endDate));
+      let rowIndex;
+      if (free) {
+        rowIndex = want;
+        const m = memberById(memberId);
+        if (m && want + 1 > (m.rowCount || 1)) { await updateDoc(doc(db, `teams/${WS}/members/${memberId}`), { rowCount: want + 1, updatedAt: serverTimestamp() }); m.rowCount = want + 1; }
+      } else rowIndex = await pickRow(memberId, startDate, endDate, null);
+      const data = { memberId, title, startDate, endDate, color, rowIndex, createdBy: user.uid,
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ...stamp() };
+      if (projectId) data.projectId = projectId;
+      const ref = await addDoc(collection(db, `schedules/${WS}/items`), data);
+      record({ type: "create", path: `schedules/${WS}/items/${ref.id}`, id: ref.id, data, label: `${short(title)} 추가` });
+      if (!selected.includes(memberId)) { selected = [...selected, memberId]; saveSel(); }
+      toast("추가했어요 · 막대 끝을 끌어 기간 조절");
+    }
+    closeSheet();
+  } catch (e) {
+    $("pErr").textContent = "저장 실패: " + (e.code || e.message); sendLog("save: " + (e.code || e.message));
+    $("pOk").disabled = false;
+  }
+}
+
+// ---------- data ----------
+let unsubs = [];
+async function startData() {
+  unsubs.forEach((u) => u()); unsubs = [];
+  try {
+    const [mSnap, pSnap] = await Promise.all([
+      getDocs(query(collection(db, `teams/${WS}/members`), orderBy("order", "asc"))),
+      getDocs(collection(db, `projects/${WS}/items`)),
+    ]);
+    members = mSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    projects = pSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    projectObj = projects.find((p) => p.id === PROJECT) || projects.find((p) => (p.name || "").toLowerCase() === PROJECT.toLowerCase()) || null;
+  } catch (e) {
+    sendLog("load: " + (e.code || e.message));
+    app.className = "center"; app.textContent = "데이터를 못 불러왔어요: " + (e.code || e.message); return;
+  }
+  meId = members.find((m) => m.email && user.email && m.email.toLowerCase() === user.email.toLowerCase())?.id || null;
+  try { selected = JSON.parse(store.get("selected") || "[]"); } catch { selected = []; }
+  const ok = new Set(visibleMembers().map((m) => m.id));
+  selected = selected.filter((id) => ok.has(id));
+  if (!selected.length) selected = [meId && ok.has(meId) ? meId : visibleMembers()[0]?.id].filter(Boolean);
+
+  // live updates: members (rowCount etc.), schedules, special notes
+  unsubs.push(onSnapshot(query(collection(db, `teams/${WS}/members`), orderBy("order", "asc")),
+    (snap) => { members = snap.docs.map((d) => ({ id: d.id, ...d.data() })); render(); }));
+  const from = sod(Date.now()) - 400 * DAY, to = sod(Date.now()) + 200 * DAY;
+  const live = (path, set) => unsubs.push(onSnapshot(
+    query(collection(db, path), where("startDate", ">=", from), where("startDate", "<=", to), orderBy("startDate", "asc")),
+    (snap) => { set(snap.docs.map((d) => { const x = d.data(); return { id: d.id, ...x, startDate: toMs(x.startDate), endDate: toMs(x.endDate),
+      createdAt: toMs(x.createdAt) || null, updatedAt: toMs(x.updatedAt) || (d.metadata.hasPendingWrites ? Date.now() : null),
+      editedAt: toMs(x.editedAt) || null }; })); render(); },
+    (e) => { sendLog(`sync ${path}: ${e.code || e.message}`); app.className = "center"; app.textContent = "동기화 실패: " + (e.code || e.message); }));
+  live(`schedules/${WS}/items`, (v) => schedules = v);
+  live(`globalEvents/${WS}/items`, (v) => events = v.map((e) => ({ ...e, _ev: true })));
+  unsubs.push(onSnapshot(doc(db, `globalEventSettings/${WS}`), (d) => {
+    const x = d.exists() ? d.data() : {};
+    evRowCounts = x.rowCounts || (x.rowCount ? { default: x.rowCount } : {});
+  }, () => {}));
+}
+
+onAuthStateChanged(auth, (u) => {
+  user = u; renderHeader();
+  if (!u) { $("chips").innerHTML = ""; renderLogin(); return; }
+  app.className = "center"; app.textContent = "불러오는 중…";
+  startData();
+});
+
+// ---------- list on/off: hiding it shrinks the widget to fit the timeline ----------
+let listHidden = store.get("listHidden") === "1";
+const neededHeight = () => {
+  const cs = getComputedStyle(document.body), gap = parseFloat(cs.rowGap) || 12;
+  const tl = document.getElementById("tl");
+  if (!tl) return null;
+  return Math.ceil(parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+    + document.querySelector("header").offsetHeight + $("chips").offsetHeight + tl.scrollHeight + gap * 2);
+};
+const resizeBy = (dh) => fetch(`/cmd/resize?dh=${Math.round(dh)}`).catch(() => {});
+function applyListState() {
+  document.body.classList.toggle("nolist", listHidden);
+  $("bList").classList.toggle("on", !listHidden);
+  $("bList").textContent = listHidden ? "목록 ▸" : "목록 ▾";
+}
+let fitT = null;
+function fitToContent() {           // while the list is hidden, keep the window exactly as tall as the content
+  if (!listHidden) return;
+  clearTimeout(fitT);
+  fitT = setTimeout(() => {
+    const need = neededHeight(); if (need == null) return;
+    const d = need - innerHeight;
+    if (Math.abs(d) > 3) resizeBy(d);
+  }, 120);
+}
+$("bList").onclick = () => {
+  bump($("bList"));
+  if (!listHidden) {
+    const need = neededHeight(); if (need == null) return;
+    store.set("listExtra", String(Math.max(120, innerHeight - need)));   // remember how much room the list had
+    listHidden = true; store.set("listHidden", "1"); applyListState();
+    resizeBy(need - innerHeight);
+  } else {
+    listHidden = false; store.set("listHidden", "0"); applyListState();
+    if (!RM) document.querySelector("main")?.animate([{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { duration: 380, easing: "cubic-bezier(.16,1,.3,1)" });
+    resizeBy(Number(store.get("listExtra")) || 260);
+  }
+};
+applyListState();
+
+$("bAdd").onclick = () => { if (user && members.length) openSheet(null, {}, $("bAdd")); };
+$("bSite").onclick = () => cmd("site");
+setInterval(() => { if (!$("ov").classList.contains("show")) render(); }, 60000);
+renderHeader();
+</script>
+</body>
+</html>
