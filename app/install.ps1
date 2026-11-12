@@ -14,12 +14,12 @@ Get-ChildItem $Dest -Recurse -File | Unblock-File
 # desktop shortcut to (re)open the widget
 $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'CAT Schedule Widget.lnk'
 $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
-$sc.TargetPath = 'powershell.exe'
-$sc.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$ps1`""
+$sc.TargetPath = 'wscript.exe'
+$sc.Arguments = "`"$(Join-Path $Dest 'launch.vbs')`""
 $sc.WindowStyle = 7
 $sc.IconLocation = "$(Join-Path $Dest 'cat.ico'),0"
 $sc.Save()
 
 if (-not $NoStartup) { & powershell -NoProfile -ExecutionPolicy Bypass -File $ps1 -Install | Out-Null }
-if (-not $NoLaunch) { Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',"`"$ps1`"" }
+if (-not $NoLaunch) { Start-Process wscript.exe -ArgumentList "`"$(Join-Path $Dest 'launch.vbs')`"" }
 Write-Host "Installed to $Dest"

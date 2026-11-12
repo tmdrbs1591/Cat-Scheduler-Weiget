@@ -86,7 +86,9 @@ function Install-Update([string]$remote) {
     finally { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
 }
 function Restart-Self {
-    Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',"`"$(Join-Path $Here 'wallpaper.ps1')`""
+    $vbs = Join-Path $Here 'launch.vbs'
+    if (Test-Path $vbs) { Start-Process wscript.exe -ArgumentList "`"$vbs`"" }
+    else { Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',"`"$(Join-Path $Here 'wallpaper.ps1')`"" }
 }
 
 trap {
@@ -97,8 +99,8 @@ trap {
 $Lnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'CalendarWallpaper.lnk'
 if ($Install) {
     $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($Lnk)
-    $sc.TargetPath = 'powershell.exe'
-    $sc.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$($MyInvocation.MyCommand.Path)`""
+    $sc.TargetPath = 'wscript.exe'
+    $sc.Arguments = "`"$(Join-Path $Here 'launch.vbs')`""
     $sc.WindowStyle = 7
     $ico = Join-Path $Here 'cat.ico'; if (Test-Path $ico) { $sc.IconLocation = "$ico,0" }
     $sc.Save()
@@ -234,6 +236,9 @@ function Handle-Request($ctx) {
             if ($txt.Length -gt 1500) { $txt = $txt.Substring(0, 1500) + '...' }
             Log ("[page] " + ($txt -replace "[`r`n]+", ' '))
             $body = [Text.Encoding]::UTF8.GetBytes('ok') }
+        '^/update/status$' { $type = 'application/json'
+            $body = [Text.Encoding]::UTF8.GetBytes((@{ current = $AppVersion; available = "$($script:updateReady)" } | ConvertTo-Json -Compress)) }
+        '^/update/now$' { $script:trayCmd = 'updatenow'; $body = [Text.Encoding]::UTF8.GetBytes('ok') }
         '^/cmd/drag$' { $doDrag = $true; $body = [Text.Encoding]::UTF8.GetBytes('ok') }
         '^/cmd/site$' { Start-Process $SiteUrl; $body = [Text.Encoding]::UTF8.GetBytes('ok') }
         default       { $res.StatusCode = 404; $body = [Text.Encoding]::UTF8.GetBytes('not found') }
@@ -310,11 +315,11 @@ $SWP_NOSIZE = 0x1; $SWP_NOMOVE = 0x2; $SWP_NOACTIVATE = 0x10; $SWP_FRAMECHANGED 
 $progman = [W]::FindWindow('Progman', [NullString]::Value)
 
 function Pin-ToDesktop($h) {
-    # Owned by the desktop -> no taskbar button, stays visible on Win+D
+    # Owned by the desktop -> stays visible on Win+D; APPWINDOW gives it a taskbar button
     [W]::ShowWindow($h, 0) | Out-Null
     [W]::SetWindowLongPtr($h, -8, $progman) | Out-Null          # GWL_HWNDPARENT = owner
     $ex = [W]::GetWindowLong($h, -20)
-    $ex = ($ex -bor 0x80) -band (-bnot 0x40000)                  # TOOLWINDOW on, APPWINDOW off
+    $ex = ($ex -bor 0x40000) -band (-bnot 0x80)                  # APPWINDOW on (taskbar button), TOOLWINDOW off
     [W]::SetWindowLong($h, -20, $ex) | Out-Null
     [W]::SetWindowPos($h, $HWND_BOTTOM, 0, 0, 0, 0, $SWP_NOSIZE -bor $SWP_NOMOVE -bor $SWP_NOACTIVATE -bor $SWP_FRAMECHANGED) | Out-Null
     [W]::ShowWindow($h, 4) | Out-Null                            # SW_SHOWNOACTIVATE
@@ -356,7 +361,11 @@ function Set-ShortcutIcons {
     if (-not (Test-Path $IconFile)) { return }
     $shell = New-Object -ComObject WScript.Shell
     foreach ($l in @((Join-Path ([Environment]::GetFolderPath('Desktop')) 'CAT Schedule Widget.lnk'), $Lnk)) {
-        try { if (Test-Path $l) { $sc = $shell.CreateShortcut($l); if ($sc.IconLocation -ne "$IconFile,0") { $sc.IconLocation = "$IconFile,0"; $sc.Save() } } } catch {}
+        try { if (Test-Path $l) {
+            $sc = $shell.CreateShortcut($l); $vbs = Join-Path $Here 'launch.vbs'; $dirty = $false
+            if ($sc.IconLocation -ne "$IconFile,0") { $sc.IconLocation = "$IconFile,0"; $dirty = $true }
+            if ((Test-Path $vbs) -and $sc.TargetPath -notlike '*wscript.exe') { $sc.TargetPath = 'wscript.exe'; $sc.Arguments = "`"$vbs`""; $dirty = $true }
+            if ($dirty) { $sc.Save() } } } catch {}
     }
 }
 Set-ShortcutIcons
@@ -380,17 +389,29 @@ if (-not (Test-Path $firstRunFlag)) {
 Show-Widget 6
 
 # Keep it on the desktop layer and remember where the user puts it
+$updateReady = $null
 function Do-UpdateCheck([switch]$Manual) {
-    $script:nextUpdateCheck = (Get-Date).AddHours(3)
+    $script:nextUpdateCheck = (Get-Date).AddMinutes(30)
     $v = Update-Available
     if (-not $v) { if ($Manual) { $tray.ShowBalloonTip(3000, 'CAT 일정 위젯', "최신 버전이에요 (v$AppVersion)", 'Info') }; return }
-    $tray.ShowBalloonTip(4000, 'CAT 일정 위젯', "새 버전 v$v 으로 업데이트합니다…", 'Info')
+    if (-not $Manual) {                     # found in the background: let the widget show a [업데이트] button
+        if ($script:updateReady -ne $v) {
+            $script:updateReady = $v
+            Log "update available: $v"
+            $tray.ShowBalloonTip(5000, 'CAT 일정 위젯', "새 버전 v$v 이 있어요. 위젯의 [업데이트] 버튼을 누르면 바로 적용돼요.", 'Info')
+        }
+        return
+    }
+    Apply-Update $v
+}
+function Apply-Update([string]$v) {
+    $tray.ShowBalloonTip(3000, 'CAT 일정 위젯', "v$v 으로 업데이트하고 다시 켭니다…", 'Info')
     if (Install-Update $v) {
         $tray.Visible = $false; $tray.Dispose(); $listener.Stop()
         Restart-Self; exit 0
-    } elseif ($Manual) { $tray.ShowBalloonTip(4000, 'CAT 일정 위젯', '업데이트에 실패했어요. 문제 보고로 로그를 보내주세요.', 'Warning') }
+    } else { $tray.ShowBalloonTip(4000, 'CAT 일정 위젯', '업데이트에 실패했어요. 문제 보고로 로그를 보내주세요.', 'Warning') }
 }
-$nextUpdateCheck = (Get-Date).AddHours(3)
+$nextUpdateCheck = (Get-Date).AddMinutes(30)
 
 $lastSaved = ''
 $lastSize = ''
@@ -404,10 +425,9 @@ while ($true) {
             'show'   { Show-Widget 8 }
             'site'   { Start-Process $SiteUrl }
             'update' { Do-UpdateCheck -Manual }
+            'updatenow' { if ($updateReady) { Apply-Update $updateReady } else { Do-UpdateCheck -Manual } }
             'report' { Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$(Join-Path $Here 'report.ps1')`"" }
-            'reload' { $tray.Visible = $false; $tray.Dispose()
-                       Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',"`"$($MyInvocation.MyCommand.Path)`""
-                       $listener.Stop(); exit 0 }
+            'reload' { $tray.Visible = $false; $tray.Dispose(); $listener.Stop(); Restart-Self; exit 0 }
             'exit'   { $tray.Visible = $false; $tray.Dispose(); Stop-OurEdge; $listener.Stop(); exit 0 }
         }
     }
@@ -417,7 +437,11 @@ while ($true) {
         if ($h2 -ne [IntPtr]::Zero) { $hwnd = $h2; Pin-ToDesktop $hwnd; $lastSize = '' }
         continue
     }
-    if ([W]::IsIconic($hwnd)) { [W]::ShowWindow($hwnd, 4) | Out-Null }   # don't stay minimized
+    if ([W]::IsIconic($hwnd)) {                                   # minimized (e.g. taskbar click): back onto the desktop instead
+        [W]::ShowWindow($hwnd, 4) | Out-Null
+        [W]::SetWindowPos($hwnd, $HWND_BOTTOM, 0, 0, 0, 0, $SWP_NOSIZE -bor $SWP_NOMOVE -bor $SWP_NOACTIVATE) | Out-Null
+        $showUntil = [DateTime]::MinValue
+    }
     if ([W]::GetForegroundWindow() -eq $hwnd) { $showUntil = [DateTime]::MinValue }   # once you use it, normal rules apply
     if (-not $editing -and (Get-Date) -gt $showUntil -and [W]::GetForegroundWindow() -ne $hwnd) {
         # whenever you're not using it, push it back down behind everything
