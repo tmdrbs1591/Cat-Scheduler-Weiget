@@ -446,11 +446,7 @@ while ($true) {
         if ($h2 -ne [IntPtr]::Zero) { $hwnd = $h2; Pin-ToDesktop $hwnd; $lastSize = '' }
         continue
     }
-    if ([W]::IsIconic($hwnd)) {                                   # minimized (e.g. taskbar click): back onto the desktop instead
-        [W]::ShowWindow($hwnd, 4) | Out-Null
-        [W]::SetWindowPos($hwnd, $HWND_BOTTOM, 0, 0, 0, 0, $SWP_NOSIZE -bor $SWP_NOMOVE -bor $SWP_NOACTIVATE) | Out-Null
-        $showUntil = [DateTime]::MinValue
-    }
+    if ([W]::IsIconic($hwnd)) { $showUntil = [DateTime]::MinValue; continue }   # minimized: leave it down until it is reopened from the taskbar
     if ([W]::GetForegroundWindow() -eq $hwnd) { $showUntil = [DateTime]::MinValue }   # once you use it, normal rules apply
     if (-not $editing -and (Get-Date) -gt $showUntil -and [W]::GetForegroundWindow() -ne $hwnd) {
         # whenever you're not using it, push it back down behind everything
